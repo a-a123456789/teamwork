@@ -73,7 +73,10 @@ export class AuthService {
       return { user, workspace, membership };
     });
 
-    const accessToken = await this.createAccessToken(result.user.id, result.user.email);
+    const accessToken = await this.createAccessToken(
+      result.user.id,
+      result.user.email,
+    );
     const workspaces = await this.workspacesService.listForUser(result.user.id);
 
     return {
@@ -124,7 +127,10 @@ export class AuthService {
     return this.jwtService.verifyAsync<JwtAccessTokenPayload>(token);
   }
 
-  private async createAccessToken(userId: string, email: string): Promise<string> {
+  private async createAccessToken(
+    userId: string,
+    email: string,
+  ): Promise<string> {
     const payload: JwtAccessTokenPayload = {
       sub: userId,
       email,

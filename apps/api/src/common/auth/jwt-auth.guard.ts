@@ -1,8 +1,4 @@
-import {
-  ExecutionContext,
-  Injectable,
-  type CanActivate,
-} from '@nestjs/common';
+import { ExecutionContext, Injectable, type CanActivate } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';

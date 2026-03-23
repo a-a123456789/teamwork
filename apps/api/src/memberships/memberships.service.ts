@@ -11,7 +11,10 @@ import {
   type WorkspaceMembership,
 } from '@prisma/client';
 import { normalizeEmail } from '@teamwork/validation';
-import type { WorkspaceMembershipSummary, WorkspaceRole } from '@teamwork/types';
+import type {
+  WorkspaceMembershipSummary,
+  WorkspaceRole,
+} from '@teamwork/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 
@@ -42,7 +45,9 @@ export class MembershipsService {
       });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        throw new ConflictException('The user is already a member of this workspace.');
+        throw new ConflictException(
+          'The user is already a member of this workspace.',
+        );
       }
 
       throw error;
@@ -141,7 +146,12 @@ export class MembershipsService {
     return { success: true };
   }
 
-  toSummary(membership: Pick<WorkspaceMembership, 'id' | 'workspaceId' | 'userId' | 'role' | 'createdAt'>): WorkspaceMembershipSummary {
+  toSummary(
+    membership: Pick<
+      WorkspaceMembership,
+      'id' | 'workspaceId' | 'userId' | 'role' | 'createdAt'
+    >,
+  ): WorkspaceMembershipSummary {
     return {
       id: membership.id,
       workspaceId: membership.workspaceId,
@@ -164,9 +174,7 @@ export class MembershipsService {
     });
 
     if (ownerCount === 0) {
-      throw new BadRequestException(
-        'Workspace must keep at least one owner.',
-      );
+      throw new BadRequestException('Workspace must keep at least one owner.');
     }
   }
 }

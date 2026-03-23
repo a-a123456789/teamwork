@@ -23,7 +23,10 @@ export class WorkspaceMemberGuard implements CanActivate {
     }
 
     request.workspaceMembership =
-      await this.membershipsService.requireMembership(workspaceId, request.user.id);
+      await this.membershipsService.requireMembership(
+        workspaceId,
+        request.user.id,
+      );
 
     return true;
   }

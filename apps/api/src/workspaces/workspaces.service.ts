@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, type Workspace, type WorkspaceMembership } from '@prisma/client';
+import {
+  Prisma,
+  type Workspace,
+  type WorkspaceMembership,
+} from '@prisma/client';
 import type { AuthenticatedWorkspace, WorkspaceSummary } from '@teamwork/types';
 import { normalizeWorkspaceName } from '@teamwork/validation';
 import { slugify } from '../common/utils/slug.util';
