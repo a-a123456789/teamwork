@@ -1,13 +1,25 @@
-import {
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { WorkspaceRole as PrismaWorkspaceRole } from '@prisma/client';
+import type { UserSummary, WorkspaceMemberDetail } from '@teamwork/types';
 import { WorkspaceInvitationsService } from './workspace-invitations.service';
 
 describe('WorkspaceInvitationsService', () => {
   const workspaceId = 'workspace-1';
   const invitationId = 'invitation-1';
+  type MembershipRecord = {
+    id: string;
+    workspaceId: string;
+    userId: string;
+    role: PrismaWorkspaceRole;
+    createdAt: Date;
+  };
+  type UserRecord = {
+    id: string;
+    email: string;
+    displayName: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
 
   let prisma: {
     workspaceInvitation: {
@@ -32,6 +44,28 @@ describe('WorkspaceInvitationsService', () => {
   let service: WorkspaceInvitationsService;
 
   beforeEach(() => {
+    const runInTransaction = <T>(
+      callback: (tx: typeof prisma) => Promise<T>,
+    ): Promise<T> => callback(prisma);
+    const toUserSummary = (user: UserRecord): UserSummary => ({
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    });
+    const toMemberDetail = (
+      membership: MembershipRecord,
+      user: UserRecord,
+    ): WorkspaceMemberDetail => ({
+      id: membership.id,
+      workspaceId: membership.workspaceId,
+      userId: membership.userId,
+      role: membership.role,
+      createdAt: membership.createdAt.toISOString(),
+      user: toUserSummary(user),
+    });
+
     prisma = {
       workspaceInvitation: {
         findFirst: jest.fn(),
@@ -42,11 +76,16 @@ describe('WorkspaceInvitationsService', () => {
       workspaceMembership: {
         findUnique: jest.fn(),
       },
-      $transaction: jest.fn(async (callback) => callback(prisma)),
+      $transaction: jest.fn(runInTransaction),
     };
     membershipsService = {
       createMembership: jest.fn(),
-      toDetail: jest.fn((membership, user) => ({ ...membership, user })),
+      toDetail: jest.fn(
+        (
+          membership: MembershipRecord,
+          user: UserRecord,
+        ): WorkspaceMemberDetail => toMemberDetail(membership, user),
+      ),
     };
     usersService = {
       findByEmail: jest.fn(),
@@ -118,7 +157,9 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('rejects duplicate active invitations', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({ id: invitationId });
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+      id: invitationId,
+    });
 
     await expect(
       service.inviteMember(
@@ -183,10 +224,18 @@ describe('WorkspaceInvitationsService', () => {
       email: 'invitee@example.com',
     });
 
-    expect(prisma.workspaceInvitation.update).toHaveBeenCalledWith({
+    const [updateArgs] =
+      (prisma.workspaceInvitation.update.mock.calls[0] as [
+        {
+          where: { id: string };
+          data: { acceptedAt: Date };
+        },
+      ]) ?? [];
+
+    expect(updateArgs).toMatchObject({
       where: { id: invitationId },
-      data: { acceptedAt: expect.any(Date) },
     });
+    expect(updateArgs.data.acceptedAt).toBeInstanceOf(Date);
     expect(result.membership.user.email).toBe('invitee@example.com');
   });
 
@@ -222,8 +271,25 @@ describe('WorkspaceInvitationsService', () => {
         acceptedAt: null,
         revokedAt: null,
       },
-      include: {
-        workspace: true,
+      select: {
+        id: true,
+        workspaceId: true,
+        email: true,
+        role: true,
+        invitedByUserId: true,
+        createdAt: true,
+        acceptedAt: true,
+        revokedAt: true,
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            createdByUserId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });

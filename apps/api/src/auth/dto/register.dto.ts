@@ -1,4 +1,4 @@
-import { Transform } from 'class-transformer';
+import { Transform, type TransformFnParams } from 'class-transformer';
 import {
   IsEmail,
   IsOptional,
@@ -15,7 +15,7 @@ import {
 
 export class RegisterDto {
   @IsEmail()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(trimStringValue)
   email!: string;
 
   @IsString()
@@ -26,17 +26,21 @@ export class RegisterDto {
   @IsString()
   @MinLength(2)
   @MaxLength(DISPLAY_NAME_MAX_LENGTH)
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value,
-  )
+  @Transform(normalizeWhitespace)
   displayName!: string;
 
   @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(WORKSPACE_NAME_MAX_LENGTH)
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value,
-  )
+  @Transform(normalizeWhitespace)
   workspaceName?: string;
+}
+
+function trimStringValue({ value }: TransformFnParams): unknown {
+  return typeof value === 'string' ? value.trim() : value;
+}
+
+function normalizeWhitespace({ value }: TransformFnParams): unknown {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value;
 }

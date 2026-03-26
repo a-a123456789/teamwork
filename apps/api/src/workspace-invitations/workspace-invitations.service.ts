@@ -4,12 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  Prisma,
-  type User,
-  type Workspace,
-  type WorkspaceInvitation,
-} from '@prisma/client';
+import { Prisma, type WorkspaceInvitation } from '@prisma/client';
 import { normalizeEmail } from '@teamwork/validation';
 import type {
   InviteWorkspaceMemberResult,
@@ -17,11 +12,76 @@ import type {
   WorkspaceRole,
   WorkspaceSummary,
 } from '@teamwork/types';
+import type { RequestUser } from '../common/interfaces/request-user.interface';
 import { MembershipsService } from '../memberships/memberships.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 
-type InvitationDatabase = Prisma.TransactionClient | PrismaService;
+const invitationSummarySelect = {
+  id: true,
+  workspaceId: true,
+  email: true,
+  role: true,
+  invitedByUserId: true,
+  createdAt: true,
+  acceptedAt: true,
+  revokedAt: true,
+} satisfies Prisma.WorkspaceInvitationSelect;
+
+const workspaceSummarySelect = {
+  id: true,
+  name: true,
+  slug: true,
+  createdByUserId: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.WorkspaceSelect;
+
+type InvitationSummaryRecord = Prisma.WorkspaceInvitationGetPayload<{
+  select: typeof invitationSummarySelect;
+}>;
+type InvitationWithWorkspaceRecord = Prisma.WorkspaceInvitationGetPayload<{
+  select: typeof invitationSummarySelect & {
+    workspace: {
+      select: typeof workspaceSummarySelect;
+    };
+  };
+}>;
+type WorkspaceSummaryRecord = Prisma.WorkspaceGetPayload<{
+  select: typeof workspaceSummarySelect;
+}>;
+
+interface WorkspaceInvitationRepository {
+  findMany<T extends Prisma.WorkspaceInvitationFindManyArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceInvitationFindManyArgs>,
+  ): Promise<Array<Prisma.WorkspaceInvitationGetPayload<T>>>;
+  findFirst<T extends Prisma.WorkspaceInvitationFindFirstArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceInvitationFindFirstArgs>,
+  ): Promise<Prisma.WorkspaceInvitationGetPayload<T> | null>;
+  create<T extends Prisma.WorkspaceInvitationCreateArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceInvitationCreateArgs>,
+  ): Promise<Prisma.WorkspaceInvitationGetPayload<T>>;
+  update<T extends Prisma.WorkspaceInvitationUpdateArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceInvitationUpdateArgs>,
+  ): Promise<Prisma.WorkspaceInvitationGetPayload<T>>;
+}
+
+interface WorkspaceMembershipRepository {
+  findUnique<T extends Prisma.WorkspaceMembershipFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceMembershipFindUniqueArgs>,
+  ): Promise<Prisma.WorkspaceMembershipGetPayload<T> | null>;
+}
+
+interface InvitationDatabase {
+  workspaceInvitation: WorkspaceInvitationRepository;
+  workspaceMembership: WorkspaceMembershipRepository;
+}
+
+function toInvitationDatabase(
+  db: Prisma.TransactionClient | PrismaService,
+): InvitationDatabase {
+  return db as unknown as InvitationDatabase;
+}
 
 @Injectable()
 export class WorkspaceInvitationsService {
@@ -40,9 +100,14 @@ export class WorkspaceInvitationsService {
     const normalizedEmail = normalizeEmail(email);
 
     return this.prisma.$transaction(async (tx) => {
-      await this.ensureNoActiveInvitation(workspaceId, normalizedEmail, tx);
+      const db = toInvitationDatabase(tx);
 
-      const existingUser = await this.usersService.findByEmail(normalizedEmail, tx);
+      await this.ensureNoActiveInvitation(workspaceId, normalizedEmail, db);
+
+      const existingUser = await this.usersService.findByEmail(
+        normalizedEmail,
+        tx,
+      );
 
       if (existingUser) {
         const membership = await this.membershipsService.createMembership(
@@ -56,7 +121,10 @@ export class WorkspaceInvitationsService {
 
         return {
           kind: 'membership',
-          membership: this.membershipsService.toDetail(membership, existingUser),
+          membership: this.membershipsService.toDetail(
+            membership,
+            existingUser,
+          ),
         };
       }
 
@@ -67,7 +135,7 @@ export class WorkspaceInvitationsService {
           role,
           invitedByUserId,
         },
-        tx,
+        db,
       );
 
       return {
@@ -77,56 +145,79 @@ export class WorkspaceInvitationsService {
     });
   }
 
-  async listPendingInvitations(workspaceId: string): Promise<WorkspaceInvitationSummary[]> {
-    const invitations = await this.prisma.workspaceInvitation.findMany({
+  async listPendingInvitations(
+    workspaceId: string,
+  ): Promise<WorkspaceInvitationSummary[]> {
+    const invitations = await toInvitationDatabase(
+      this.prisma,
+    ).workspaceInvitation.findMany({
       where: {
         workspaceId,
         acceptedAt: null,
         revokedAt: null,
       },
+      select: invitationSummarySelect,
       orderBy: { createdAt: 'asc' },
     });
 
     return invitations.map((invitation) => this.toSummary(invitation));
   }
 
-  async listPendingInvitationsForEmail(email: string) {
+  async listPendingInvitationsForEmail(email: string): Promise<
+    Array<{
+      invitation: WorkspaceInvitationSummary;
+      workspace: WorkspaceSummary;
+    }>
+  > {
     const normalizedEmail = normalizeEmail(email);
-    const invitations = await this.prisma.workspaceInvitation.findMany({
+    const invitations = await toInvitationDatabase(
+      this.prisma,
+    ).workspaceInvitation.findMany({
       where: {
         email: normalizedEmail,
         acceptedAt: null,
         revokedAt: null,
       },
-      include: {
-        workspace: true,
+      select: {
+        ...invitationSummarySelect,
+        workspace: {
+          select: workspaceSummarySelect,
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
 
     return invitations.map((invitation) => ({
-      invitation: this.toSummary(invitation),
+      invitation: this.toSummary(invitation as InvitationWithWorkspaceRecord),
       workspace: this.toWorkspaceSummary(invitation.workspace),
     }));
   }
 
-  async revokeInvitation(workspaceId: string, invitationId: string) {
-    const invitation = await this.prisma.workspaceInvitation.findFirst({
+  async revokeInvitation(
+    workspaceId: string,
+    invitationId: string,
+  ): Promise<{ invitation: WorkspaceInvitationSummary }> {
+    const invitationStore = toInvitationDatabase(
+      this.prisma,
+    ).workspaceInvitation;
+    const invitation = await invitationStore.findFirst({
       where: {
         id: invitationId,
         workspaceId,
         acceptedAt: null,
         revokedAt: null,
       },
+      select: invitationSummarySelect,
     });
 
     if (!invitation) {
       throw new NotFoundException('Invitation not found.');
     }
 
-    const revokedInvitation = await this.prisma.workspaceInvitation.update({
+    const revokedInvitation = await invitationStore.update({
       where: { id: invitation.id },
       data: { revokedAt: new Date() },
+      select: invitationSummarySelect,
     });
 
     return {
@@ -134,16 +225,21 @@ export class WorkspaceInvitationsService {
     };
   }
 
-  async acceptInvitation(invitationId: string, user: { id: string; email: string }) {
+  async acceptInvitation(
+    invitationId: string,
+    user: Pick<RequestUser, 'id' | 'email'>,
+  ): Promise<{ membership: ReturnType<MembershipsService['toDetail']> }> {
     const normalizedEmail = normalizeEmail(user.email);
 
     return this.prisma.$transaction(async (tx) => {
-      const invitation = await tx.workspaceInvitation.findFirst({
+      const db = toInvitationDatabase(tx);
+      const invitation = await db.workspaceInvitation.findFirst({
         where: {
           id: invitationId,
           acceptedAt: null,
           revokedAt: null,
         },
+        select: invitationSummarySelect,
       });
 
       if (!invitation) {
@@ -156,7 +252,7 @@ export class WorkspaceInvitationsService {
         );
       }
 
-      const existingMembership = await tx.workspaceMembership.findUnique({
+      const existingMembership = await db.workspaceMembership.findUnique({
         where: {
           workspaceId_userId: {
             workspaceId: invitation.workspaceId,
@@ -180,15 +276,19 @@ export class WorkspaceInvitationsService {
         tx,
       );
 
-      await tx.workspaceInvitation.update({
+      await db.workspaceInvitation.update({
         where: { id: invitation.id },
         data: { acceptedAt: new Date() },
+        select: invitationSummarySelect,
       });
 
       const currentUser = await this.usersService.getByIdOrThrow(user.id, tx);
 
       return {
-        membership: this.membershipsService.toDetail(createdMembership, currentUser),
+        membership: this.membershipsService.toDetail(
+          createdMembership,
+          currentUser,
+        ),
       };
     });
   }
@@ -226,7 +326,7 @@ export class WorkspaceInvitationsService {
       invitedByUserId: string;
     },
     db: InvitationDatabase,
-  ) {
+  ): Promise<InvitationSummaryRecord> {
     try {
       return await db.workspaceInvitation.create({
         data: {
@@ -235,6 +335,7 @@ export class WorkspaceInvitationsService {
           role: input.role,
           invitedByUserId: input.invitedByUserId,
         },
+        select: invitationSummarySelect,
       });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
@@ -251,7 +352,7 @@ export class WorkspaceInvitationsService {
     workspaceId: string,
     email: string,
     db: InvitationDatabase,
-  ) {
+  ): Promise<void> {
     const existingInvitation = await db.workspaceInvitation.findFirst({
       where: {
         workspaceId,
@@ -270,10 +371,7 @@ export class WorkspaceInvitationsService {
   }
 
   private toWorkspaceSummary(
-    workspace: Pick<
-      Workspace,
-      'id' | 'name' | 'slug' | 'createdByUserId' | 'createdAt' | 'updatedAt'
-    >,
+    workspace: WorkspaceSummaryRecord,
   ): WorkspaceSummary {
     return {
       id: workspace.id,

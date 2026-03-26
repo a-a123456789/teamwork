@@ -14,7 +14,46 @@ import { MembershipsService } from '../memberships/memberships.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { slugify } from '../common/utils/slug.util';
 
-type WorkspaceDatabase = Prisma.TransactionClient | PrismaService;
+interface WorkspaceRepository {
+  create<T extends Prisma.WorkspaceCreateArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceCreateArgs>,
+  ): Promise<Prisma.WorkspaceGetPayload<T>>;
+  findUnique<T extends Prisma.WorkspaceFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceFindUniqueArgs>,
+  ): Promise<Prisma.WorkspaceGetPayload<T> | null>;
+}
+
+interface WorkspaceMembershipRepository {
+  findMany<T extends Prisma.WorkspaceMembershipFindManyArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceMembershipFindManyArgs>,
+  ): Promise<Array<Prisma.WorkspaceMembershipGetPayload<T>>>;
+  findUnique<T extends Prisma.WorkspaceMembershipFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceMembershipFindUniqueArgs>,
+  ): Promise<Prisma.WorkspaceMembershipGetPayload<T> | null>;
+  findUniqueOrThrow<T extends Prisma.WorkspaceMembershipFindUniqueOrThrowArgs>(
+    args: Prisma.SelectSubset<
+      T,
+      Prisma.WorkspaceMembershipFindUniqueOrThrowArgs
+    >,
+  ): Promise<Prisma.WorkspaceMembershipGetPayload<T>>;
+  count(args: Prisma.WorkspaceMembershipCountArgs): Promise<number>;
+}
+
+interface WorkspaceInvitationRepository {
+  count(args: Prisma.WorkspaceInvitationCountArgs): Promise<number>;
+}
+
+interface WorkspaceDatabase {
+  workspace: WorkspaceRepository;
+  workspaceMembership: WorkspaceMembershipRepository;
+  workspaceInvitation: WorkspaceInvitationRepository;
+}
+
+function toWorkspaceDatabase(
+  db: Prisma.TransactionClient | PrismaService,
+): WorkspaceDatabase {
+  return db as unknown as WorkspaceDatabase;
+}
 
 @Injectable()
 export class WorkspacesService {
@@ -25,8 +64,8 @@ export class WorkspacesService {
 
   async createWorkspace(
     input: { name: string; createdByUserId: string },
-    db: WorkspaceDatabase = this.prisma,
-  ) {
+    db: WorkspaceDatabase = toWorkspaceDatabase(this.prisma),
+  ): Promise<Workspace> {
     const normalizedName = normalizeWorkspaceName(input.name);
     const slug = await this.generateUniqueSlug(normalizedName, db);
 
@@ -40,7 +79,9 @@ export class WorkspacesService {
   }
 
   async listForUser(userId: string): Promise<AuthenticatedWorkspace[]> {
-    const memberships = await this.prisma.workspaceMembership.findMany({
+    const memberships = await toWorkspaceDatabase(
+      this.prisma,
+    ).workspaceMembership.findMany({
       where: { userId },
       include: { workspace: true },
       orderBy: { createdAt: 'asc' },
@@ -55,7 +96,8 @@ export class WorkspacesService {
     workspaceId: string,
     userId: string,
   ): Promise<WorkspaceDetails> {
-    const membership = await this.prisma.workspaceMembership.findUnique({
+    const db = toWorkspaceDatabase(this.prisma);
+    const membership = await db.workspaceMembership.findUnique({
       where: {
         workspaceId_userId: {
           workspaceId,
@@ -63,21 +105,7 @@ export class WorkspacesService {
         },
       },
       include: {
-        workspace: {
-          include: {
-            _count: {
-              select: {
-                memberships: true,
-                invitations: {
-                  where: {
-                    acceptedAt: null,
-                    revokedAt: null,
-                  },
-                },
-              },
-            },
-          },
-        },
+        workspace: true,
       },
     });
 
@@ -85,21 +113,38 @@ export class WorkspacesService {
       throw new NotFoundException('Workspace not found.');
     }
 
+    const [memberCount, invitationCount] = await Promise.all([
+      db.workspaceMembership.count({
+        where: { workspaceId },
+      }),
+      db.workspaceInvitation.count({
+        where: {
+          workspaceId,
+          acceptedAt: null,
+          revokedAt: null,
+        },
+      }),
+    ]);
+
     return {
       ...this.toAuthenticatedWorkspace(membership.workspace, membership),
-      memberCount: membership.workspace._count.memberships,
-      invitationCount: membership.workspace._count.invitations,
+      memberCount,
+      invitationCount,
     };
   }
 
-  async createWorkspaceForUser(name: string, userId: string) {
+  async createWorkspaceForUser(
+    name: string,
+    userId: string,
+  ): Promise<WorkspaceDetails> {
     return this.prisma.$transaction(async (tx) => {
+      const db = toWorkspaceDatabase(tx);
       const workspace = await this.createWorkspace(
         {
           name,
           createdByUserId: userId,
         },
-        tx,
+        db,
       );
 
       await this.membershipsService.createMembership(
@@ -111,7 +156,7 @@ export class WorkspacesService {
         tx,
       );
 
-      const membership = await tx.workspaceMembership.findUniqueOrThrow({
+      const membership = await db.workspaceMembership.findUniqueOrThrow({
         where: {
           workspaceId_userId: {
             workspaceId: workspace.id,
