@@ -1,14 +1,19 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { WorkspaceRole as PrismaWorkspaceRole } from '@prisma/client';
+import type { UserSummary } from '@teamwork/types';
 import { MembershipsService } from './memberships.service';
 
 describe('MembershipsService', () => {
   const workspaceId = 'workspace-1';
   const actingUserId = 'user-1';
   const targetUserId = 'user-2';
+  type UserRecord = {
+    id: string;
+    email: string;
+    displayName: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
 
   let prisma: {
     workspaceMembership: {
@@ -27,6 +32,17 @@ describe('MembershipsService', () => {
   let service: MembershipsService;
 
   beforeEach(() => {
+    const runInTransaction = <T>(
+      callback: (tx: typeof prisma) => Promise<T>,
+    ): Promise<T> => callback(prisma);
+    const toUserSummary = (user: UserRecord): UserSummary => ({
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    });
+
     prisma = {
       workspaceMembership: {
         findUnique: jest.fn(),
@@ -36,16 +52,15 @@ describe('MembershipsService', () => {
         count: jest.fn(),
         create: jest.fn(),
       },
-      $transaction: jest.fn(async (callback) => callback(prisma)),
+      $transaction: jest.fn(runInTransaction),
     };
     usersService = {
-      toSummary: jest.fn((user) => user),
+      toSummary: jest.fn(
+        (user: UserRecord): UserSummary => toUserSummary(user),
+      ),
     };
 
-    service = new MembershipsService(
-      prisma as never,
-      usersService as never,
-    );
+    service = new MembershipsService(prisma as never, usersService as never);
   });
 
   it('updates a member role when another owner remains', async () => {

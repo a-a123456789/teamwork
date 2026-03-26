@@ -1,6 +1,15 @@
 import { WorkspacesService } from './workspaces.service';
+import type { WorkspaceMembershipSummary } from '@teamwork/types';
 
 describe('WorkspacesService', () => {
+  type WorkspaceMembershipRecord = {
+    id: string;
+    workspaceId: string;
+    userId: string;
+    role: 'owner' | 'member';
+    createdAt: Date;
+  };
+
   let prisma: {
     workspace: {
       findUnique: jest.Mock;
@@ -9,6 +18,10 @@ describe('WorkspacesService', () => {
     workspaceMembership: {
       findUniqueOrThrow: jest.Mock;
       findUnique: jest.Mock;
+      count: jest.Mock;
+    };
+    workspaceInvitation: {
+      count: jest.Mock;
     };
     $transaction: jest.Mock;
   };
@@ -19,6 +32,19 @@ describe('WorkspacesService', () => {
   let service: WorkspacesService;
 
   beforeEach(() => {
+    const runInTransaction = <T>(
+      callback: (tx: typeof prisma) => Promise<T>,
+    ): Promise<T> => callback(prisma);
+    const toMembershipSummary = (
+      membership: WorkspaceMembershipRecord,
+    ): WorkspaceMembershipSummary => ({
+      id: membership.id,
+      workspaceId: membership.workspaceId,
+      userId: membership.userId,
+      role: membership.role,
+      createdAt: membership.createdAt.toISOString(),
+    });
+
     prisma = {
       workspace: {
         findUnique: jest.fn(),
@@ -27,12 +53,19 @@ describe('WorkspacesService', () => {
       workspaceMembership: {
         findUniqueOrThrow: jest.fn(),
         findUnique: jest.fn(),
+        count: jest.fn(),
       },
-      $transaction: jest.fn(async (callback) => callback(prisma)),
+      workspaceInvitation: {
+        count: jest.fn(),
+      },
+      $transaction: jest.fn(runInTransaction),
     };
     membershipsService = {
       createMembership: jest.fn(),
-      toSummary: jest.fn((membership) => membership),
+      toSummary: jest.fn(
+        (membership: WorkspaceMembershipRecord): WorkspaceMembershipSummary =>
+          toMembershipSummary(membership),
+      ),
     };
 
     service = new WorkspacesService(
@@ -59,7 +92,10 @@ describe('WorkspacesService', () => {
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
     });
 
-    const result = await service.createWorkspaceForUser('Product Team', 'user-1');
+    const result = await service.createWorkspaceForUser(
+      'Product Team',
+      'user-1',
+    );
 
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(membershipsService.createMembership).toHaveBeenCalledWith(
@@ -88,12 +124,10 @@ describe('WorkspacesService', () => {
         createdByUserId: 'user-1',
         createdAt: new Date('2026-03-26T00:00:00.000Z'),
         updatedAt: new Date('2026-03-26T00:00:00.000Z'),
-        _count: {
-          memberships: 3,
-          invitations: 2,
-        },
       },
     });
+    prisma.workspaceMembership.count.mockResolvedValueOnce(3);
+    prisma.workspaceInvitation.count.mockResolvedValueOnce(2);
 
     const result = await service.getWorkspaceForUser('workspace-1', 'user-1');
 

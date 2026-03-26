@@ -6,6 +6,11 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import type {
+  WorkspaceInvitationSummary,
+  WorkspaceMemberDetail,
+  WorkspaceSummary,
+} from '@teamwork/types';
 import { JwtAuthGuard } from '../common/auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { RequestUser } from '../common/interfaces/request-user.interface';
@@ -19,7 +24,12 @@ export class WorkspaceInvitationsController {
   ) {}
 
   @Get('users/me/invitations')
-  async listMyInvitations(@CurrentUser() user: RequestUser) {
+  async listMyInvitations(@CurrentUser() user: RequestUser): Promise<{
+    invitations: Array<{
+      invitation: WorkspaceInvitationSummary;
+      workspace: WorkspaceSummary;
+    }>;
+  }> {
     return {
       invitations:
         await this.workspaceInvitationsService.listPendingInvitationsForEmail(
@@ -32,7 +42,10 @@ export class WorkspaceInvitationsController {
   async acceptInvitation(
     @CurrentUser() user: RequestUser,
     @Param('invitationId', ParseUUIDPipe) invitationId: string,
-  ) {
-    return this.workspaceInvitationsService.acceptInvitation(invitationId, user);
+  ): Promise<{ membership: WorkspaceMemberDetail }> {
+    return this.workspaceInvitationsService.acceptInvitation(
+      invitationId,
+      user,
+    );
   }
 }
