@@ -1,6 +1,7 @@
 export type ID = string;
 
 export type WorkspaceRole = 'owner' | 'member';
+export type TaskStatus = 'todo' | 'in_progress' | 'done';
 
 export interface UserSummary {
   id: ID;
@@ -50,6 +51,22 @@ export interface WorkspaceDetails extends AuthenticatedWorkspace {
   memberCount: number;
   invitationCount: number;
 }
+
+export interface TaskSummary {
+  id: ID;
+  workspaceId: ID;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  createdByUserId: ID;
+  assigneeUserId: ID | null;
+  createdAt: string;
+  updatedAt: string;
+  createdByUser: UserSummary;
+  assigneeUser: UserSummary | null;
+}
+
+export type TaskDetails = TaskSummary;
 
 export type InviteWorkspaceMemberResult =
   | {

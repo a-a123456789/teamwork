@@ -1,0 +1,110 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import type { TaskDetails, TaskSummary } from '@teamwork/types';
+import { JwtAuthGuard } from '../common/auth/jwt-auth.guard';
+import { WorkspaceMemberGuard } from '../common/auth/workspace-member.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { RequestUser } from '../common/interfaces/request-user.interface';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskAssigneeDto } from './dto/update-task-assignee.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
+import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
+import { TasksService } from './tasks.service';
+
+@Controller('workspaces/:workspaceId/tasks')
+@UseGuards(JwtAuthGuard, WorkspaceMemberGuard)
+export class TasksController {
+  constructor(private readonly tasksService: TasksService) {}
+
+  @Get()
+  async listTasks(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+  ): Promise<{ tasks: TaskSummary[] }> {
+    return {
+      tasks: await this.tasksService.listTasksForWorkspace(workspaceId, user.id),
+    };
+  }
+
+  @Post()
+  async createTask(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Body() dto: CreateTaskDto,
+  ): Promise<{ task: TaskDetails }> {
+    return {
+      task: await this.tasksService.createTask(workspaceId, dto, user.id),
+    };
+  }
+
+  @Get(':taskId')
+  async getTask(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+  ): Promise<{ task: TaskDetails }> {
+    return {
+      task: await this.tasksService.getTaskForWorkspace(workspaceId, taskId, user.id),
+    };
+  }
+
+  @Patch(':taskId')
+  async updateTask(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body() dto: UpdateTaskDto,
+  ): Promise<{ task: TaskDetails }> {
+    return {
+      task: await this.tasksService.updateTask(workspaceId, taskId, dto, user.id),
+    };
+  }
+
+  @Delete(':taskId')
+  async deleteTask(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+  ): Promise<{ success: true }> {
+    await this.tasksService.deleteTask(workspaceId, taskId, user.id);
+    return { success: true };
+  }
+
+  @Patch(':taskId/status')
+  async updateTaskStatus(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body() dto: UpdateTaskStatusDto,
+  ): Promise<{ task: TaskDetails }> {
+    return {
+      task: await this.tasksService.updateTaskStatus(workspaceId, taskId, dto.status, user.id),
+    };
+  }
+
+  @Patch(':taskId/assignee')
+  async updateTaskAssignee(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body() dto: UpdateTaskAssigneeDto,
+  ): Promise<{ task: TaskDetails }> {
+    return {
+      task: await this.tasksService.updateTaskAssignee(
+        workspaceId,
+        taskId,
+        dto.assigneeUserId,
+        user.id,
+      ),
+    };
+  }
+}

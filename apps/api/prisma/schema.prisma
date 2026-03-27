@@ -12,30 +12,39 @@ enum WorkspaceRole {
   member
 }
 
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
 model User {
-  id               String                @id @default(uuid()) @db.Uuid
-  email            String                @unique
-  passwordHash     String                @map("password_hash")
-  displayName      String                @map("display_name")
-  createdAt        DateTime              @default(now()) @map("created_at")
-  updatedAt        DateTime              @updatedAt @map("updated_at")
-  createdWorkspaces Workspace[]          @relation("WorkspaceCreator")
-  memberships      WorkspaceMembership[]
-  sentWorkspaceInvitations WorkspaceInvitation[] @relation("WorkspaceInvitationInviter")
+  id                        String                @id @default(uuid()) @db.Uuid
+  email                     String                @unique
+  passwordHash              String                @map("password_hash")
+  displayName               String                @map("display_name")
+  createdAt                 DateTime              @default(now()) @map("created_at")
+  updatedAt                 DateTime              @updatedAt @map("updated_at")
+  createdWorkspaces         Workspace[]           @relation("WorkspaceCreator")
+  memberships               WorkspaceMembership[]
+  sentWorkspaceInvitations  WorkspaceInvitation[] @relation("WorkspaceInvitationInviter")
+  createdTasks              Task[]                @relation("TaskCreator")
+  assignedTasks             Task[]                @relation("TaskAssignee")
 
   @@map("users")
 }
 
 model Workspace {
-  id             String                @id @default(uuid()) @db.Uuid
-  name           String
-  slug           String                @unique
-  createdByUserId String               @map("created_by_user_id") @db.Uuid
-  createdAt      DateTime              @default(now()) @map("created_at")
-  updatedAt      DateTime              @updatedAt @map("updated_at")
-  createdByUser  User                  @relation("WorkspaceCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  memberships    WorkspaceMembership[]
-  invitations    WorkspaceInvitation[]
+  id              String                @id @default(uuid()) @db.Uuid
+  name            String
+  slug            String                @unique
+  createdByUserId String                @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+  createdByUser   User                  @relation("WorkspaceCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  memberships     WorkspaceMembership[]
+  invitations     WorkspaceInvitation[]
+  tasks           Task[]
 
   @@index([createdByUserId])
   @@map("workspaces")
@@ -71,4 +80,24 @@ model WorkspaceInvitation {
   @@index([workspaceId])
   @@index([email])
   @@map("workspace_invitations")
+}
+
+model Task {
+  id              String     @id @default(uuid()) @db.Uuid
+  workspaceId     String     @map("workspace_id") @db.Uuid
+  title           String
+  description     String?
+  status          TaskStatus @default(todo)
+  createdByUserId String     @map("created_by_user_id") @db.Uuid
+  assigneeUserId  String?    @map("assignee_user_id") @db.Uuid
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  workspace       Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByUser   User       @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  assigneeUser    User?      @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([assigneeUserId])
+  @@index([workspaceId, status])
+  @@map("tasks")
 }
