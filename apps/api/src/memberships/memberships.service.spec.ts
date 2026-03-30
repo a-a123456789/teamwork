@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { WorkspaceRole as PrismaWorkspaceRole } from '@prisma/client';
+import { Prisma, WorkspaceRole as PrismaWorkspaceRole } from '@prisma/client';
 import type { UserSummary } from '@teamwork/types';
 import { MembershipsService } from './memberships.service';
 
@@ -109,6 +109,49 @@ describe('MembershipsService', () => {
     await expect(
       service.updateMemberRole(workspaceId, actingUserId, 'member'),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('retries role changes after a serializable transaction conflict', async () => {
+    prisma.workspaceMembership.findUnique.mockResolvedValueOnce({
+      id: 'membership-1',
+      workspaceId,
+      userId: targetUserId,
+      role: PrismaWorkspaceRole.owner,
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    prisma.workspaceMembership.count.mockResolvedValueOnce(1);
+    prisma.workspaceMembership.update.mockResolvedValueOnce({
+      id: 'membership-1',
+      workspaceId,
+      userId: targetUserId,
+      role: PrismaWorkspaceRole.member,
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      user: {
+        id: targetUserId,
+        email: 'member@example.com',
+        displayName: 'Member',
+        createdAt: new Date('2026-03-26T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+      },
+    });
+
+    prisma.$transaction
+      .mockRejectedValueOnce({ code: 'P2034' })
+      .mockImplementationOnce(async (callback: (tx: typeof prisma) => Promise<unknown>) =>
+        callback(prisma),
+      );
+
+    const result = await service.updateMemberRole(workspaceId, targetUserId, 'member');
+
+    expect(result.role).toBe('member');
+    expect(prisma.$transaction).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Function),
+      expect.objectContaining({
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      }),
+    );
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
   });
 
   it('allows a member to remove themselves', async () => {

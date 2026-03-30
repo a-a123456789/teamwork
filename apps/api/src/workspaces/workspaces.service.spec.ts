@@ -103,6 +103,35 @@ describe('WorkspacesService', () => {
     expect(result.invitationCount).toBe(0);
   });
 
+  it('retries workspace creation when slug creation races on a unique constraint', async () => {
+    prisma.workspace.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    prisma.workspace.create.mockResolvedValueOnce({
+      id: 'workspace-1',
+      name: 'Product Team',
+      slug: 'product-team',
+      createdByUserId: 'user-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    prisma.workspaceMembership.findUniqueOrThrow.mockResolvedValueOnce({
+      id: 'membership-1',
+      workspaceId: 'workspace-1',
+      userId: 'user-1',
+      role: 'owner',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    prisma.$transaction
+      .mockRejectedValueOnce({ code: 'P2002', meta: { target: ['slug'] } })
+      .mockImplementationOnce(async (callback: (tx: typeof prisma) => Promise<unknown>) =>
+        callback(prisma),
+      );
+
+    const result = await service.createWorkspaceForUser('Product Team', 'user-1');
+
+    expect(result.slug).toBe('product-team');
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+  });
+
   it('returns workspace details with member and invitation counts', async () => {
     prisma.workspaceMembership.findUnique.mockResolvedValueOnce({
       id: 'membership-1',

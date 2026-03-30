@@ -97,19 +97,28 @@ describe('TasksService', () => {
       } as never,
       userId,
     );
+    const [createTaskArgs] = prisma.task.create.mock.calls as [
+      [
+        {
+          data: {
+            workspaceId: string;
+            title: string;
+            description: string | null;
+            createdByUserId: string;
+            assigneeUserId: string | null;
+          };
+        },
+      ],
+    ];
 
     expect(membershipsService.requireMembership).toHaveBeenCalledWith(workspaceId, userId);
-    expect(prisma.task.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          workspaceId,
-          title: 'Build API',
-          description: 'Add task routes',
-          createdByUserId: userId,
-          assigneeUserId: otherUserId,
-        }),
-      }),
-    );
+    expect(createTaskArgs[0].data).toMatchObject({
+      workspaceId,
+      title: 'Build API',
+      description: 'Add task routes',
+      createdByUserId: userId,
+      assigneeUserId: otherUserId,
+    });
     expect(result.createdByUserId).toBe(userId);
   });
 

@@ -1,5 +1,5 @@
 import { Transform, type TransformFnParams } from 'class-transformer';
-import { IsOptional, IsString, IsUUID, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { IsString, IsUUID, MaxLength, MinLength, ValidateIf } from 'class-validator';
 import { TASK_DESCRIPTION_MAX_LENGTH, TASK_TITLE_MAX_LENGTH } from '@teamwork/validation';
 
 function normalizeTaskTitleValue({ value }: TransformFnParams): unknown {

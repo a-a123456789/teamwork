@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type Workspace, type WorkspaceMembership } from '@prisma/client';
 import type { AuthenticatedWorkspace, WorkspaceDetails, WorkspaceSummary } from '@teamwork/types';
 import { normalizeWorkspaceName } from '@teamwork/validation';
+import { isPrismaUniqueConstraintForField } from '../common/utils/prisma-error.util';
 import { MembershipsService } from '../memberships/memberships.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { slugify } from '../common/utils/slug.util';
@@ -44,6 +45,8 @@ interface WorkspaceDatabase {
   workspaceMembership: WorkspaceMembershipRepository;
   workspaceInvitation: WorkspaceInvitationRepository;
 }
+
+const MAX_WORKSPACE_CREATE_RETRIES = 3;
 
 function toWorkspaceDatabase(db: Prisma.TransactionClient | PrismaService): WorkspaceDatabase {
   return {
@@ -127,40 +130,42 @@ export class WorkspacesService {
   }
 
   async createWorkspaceForUser(name: string, userId: string): Promise<WorkspaceDetails> {
-    return this.prisma.$transaction(async (tx) => {
-      const db = toWorkspaceDatabase(tx);
-      const workspace = await this.createWorkspace(
-        {
-          name,
-          createdByUserId: userId,
-        },
-        db,
-      );
+    return this.runCreateWorkspaceTransaction(async () =>
+      this.prisma.$transaction(async (tx) => {
+        const db = toWorkspaceDatabase(tx);
+        const workspace = await this.createWorkspace(
+          {
+            name,
+            createdByUserId: userId,
+          },
+          db,
+        );
 
-      await this.membershipsService.createMembership(
-        {
-          workspaceId: workspace.id,
-          userId,
-          role: 'owner',
-        },
-        tx,
-      );
-
-      const membership = await db.workspaceMembership.findUniqueOrThrow({
-        where: {
-          workspaceId_userId: {
+        await this.membershipsService.createMembership(
+          {
             workspaceId: workspace.id,
             userId,
+            role: 'owner',
           },
-        },
-      });
+          tx,
+        );
 
-      return {
-        ...this.toAuthenticatedWorkspace(workspace, membership),
-        memberCount: 1,
-        invitationCount: 0,
-      };
-    });
+        const membership = await db.workspaceMembership.findUniqueOrThrow({
+          where: {
+            workspaceId_userId: {
+              workspaceId: workspace.id,
+              userId,
+            },
+          },
+        });
+
+        return {
+          ...this.toAuthenticatedWorkspace(workspace, membership),
+          memberCount: 1,
+          invitationCount: 0,
+        };
+      }),
+    );
   }
 
   toSummary(
@@ -208,6 +213,21 @@ export class WorkspacesService {
       }
 
       attempt += 1;
+    }
+  }
+
+  private async runCreateWorkspaceTransaction<T>(operation: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await operation();
+      } catch (error) {
+        if (
+          !isPrismaUniqueConstraintForField(error, 'slug') ||
+          attempt >= MAX_WORKSPACE_CREATE_RETRIES - 1
+        ) {
+          throw error;
+        }
+      }
     }
   }
 }

@@ -15,10 +15,12 @@ import type {
   WorkspaceMembershipSummary,
   WorkspaceRole,
 } from '@teamwork/types';
+import { isPrismaErrorCode } from '../common/utils/prisma-error.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 
 type MembershipDatabase = Prisma.TransactionClient | PrismaService;
+const MAX_SERIALIZABLE_RETRIES = 3;
 
 @Injectable()
 export class MembershipsService {
@@ -88,7 +90,7 @@ export class MembershipsService {
     userId: string,
     role: WorkspaceRole,
   ): Promise<WorkspaceMemberDetail> {
-    return this.prisma.$transaction(async (tx) => {
+    return this.runInSerializableTransaction(async (tx) => {
       const membership = await this.requireMembership(workspaceId, userId, tx);
 
       if (membership.role === PrismaWorkspaceRole.owner && role !== 'owner') {
@@ -106,7 +108,7 @@ export class MembershipsService {
   }
 
   async removeMember(workspaceId: string, userId: string, actingUserId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    return this.runInSerializableTransaction(async (tx) => {
       const membership = await this.requireMembership(workspaceId, userId, tx);
 
       if (actingUserId !== userId) {
@@ -168,6 +170,22 @@ export class MembershipsService {
       throw new BadRequestException('Workspace must keep at least one owner.');
     }
   }
+
+  private async runInSerializableTransaction<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (!isRetryableTransactionError(error) || attempt >= MAX_SERIALIZABLE_RETRIES - 1) {
+          throw error;
+        }
+      }
+    }
+  }
 }
 
 function toPrismaRole(role: WorkspaceRole): PrismaWorkspaceRole {
@@ -175,9 +193,9 @@ function toPrismaRole(role: WorkspaceRole): PrismaWorkspaceRole {
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    return error.code === 'P2002';
-  }
+  return isPrismaErrorCode(error, 'P2002');
+}
 
-  return false;
+function isRetryableTransactionError(error: unknown): boolean {
+  return isPrismaErrorCode(error, 'P2034');
 }
