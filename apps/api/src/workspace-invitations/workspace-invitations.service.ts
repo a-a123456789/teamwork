@@ -13,6 +13,7 @@ import type {
   WorkspaceSummary,
 } from '@teamwork/types';
 import type { RequestUser } from '../common/interfaces/request-user.interface';
+import { isPrismaErrorCode } from '../common/utils/prisma-error.util';
 import { MembershipsService } from '../memberships/memberships.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
@@ -355,9 +356,5 @@ export class WorkspaceInvitationsService {
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    return error.code === 'P2002';
-  }
-
-  return false;
+  return isPrismaErrorCode(error, 'P2002');
 }

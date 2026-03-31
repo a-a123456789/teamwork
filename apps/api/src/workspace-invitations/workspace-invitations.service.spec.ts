@@ -172,6 +172,16 @@ describe('WorkspaceInvitationsService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('translates invitation unique-index conflicts into a conflict response', async () => {
+    usersService.findByEmail.mockResolvedValueOnce(null);
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce(null);
+    prisma.workspaceInvitation.create.mockRejectedValueOnce({ code: 'P2002' });
+
+    await expect(
+      service.inviteMember(workspaceId, 'invitee@example.com', 'member', 'owner-1'),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
   it('blocks accepting an invitation for another email', async () => {
     prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
       id: invitationId,

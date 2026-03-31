@@ -2,10 +2,10 @@ import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import type { RequestUser } from '../common/interfaces/request-user.interface';
 import { JwtAuthGuard } from '../common/auth/jwt-auth.guard';
 import { WorkspaceMemberGuard } from '../common/auth/workspace-member.guard';
-import { CreateTaskDto } from './dto/create-task.dto';
-import { UpdateTaskAssigneeDto } from './dto/update-task-assignee.dto';
-import { UpdateTaskDto } from './dto/update-task.dto';
-import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
+import type { CreateTaskDto } from './dto/create-task.dto';
+import type { UpdateTaskAssigneeDto } from './dto/update-task-assignee.dto';
+import type { UpdateTaskDto } from './dto/update-task.dto';
+import type { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { TasksController } from './tasks.controller';
 
 describe('TasksController', () => {
