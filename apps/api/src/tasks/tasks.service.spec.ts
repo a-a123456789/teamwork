@@ -191,6 +191,49 @@ describe('TasksService', () => {
     expect(result).toHaveLength(1);
   });
 
+  it('lists tasks for the current user across accessible workspaces', async () => {
+    prisma.task.findMany.mockResolvedValueOnce([buildTaskRecord()]);
+
+    const result = await service.listTasksForUser(userId, {});
+
+    expect(membershipsService.requireMembership).not.toHaveBeenCalled();
+    expect(prisma.task.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          workspace: {
+            memberships: {
+              some: {
+                userId,
+              },
+            },
+          },
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      }),
+    );
+    expect(result).toHaveLength(1);
+  });
+
+  it('reuses workspace-scoped listing when the user inbox is filtered to one workspace', async () => {
+    prisma.task.findMany.mockResolvedValueOnce([buildTaskRecord()]);
+
+    await service.listTasksForUser(userId, {
+      workspaceId,
+      assignment: 'me',
+      dueBucket: 'today',
+      referenceDate: '2026-04-15',
+    });
+
+    expect(membershipsService.requireMembership).toHaveBeenCalledWith(workspaceId, userId);
+    expect(getLastListTasksWhere()).toEqual({
+      workspaceId,
+      assigneeUserId: userId,
+      dueDate: {
+        equals: new Date('2026-04-15T00:00:00.000Z'),
+      },
+    });
+  });
+
   it('leaves assignee unconstrained when assignment is all', async () => {
     prisma.task.findMany.mockResolvedValueOnce([buildTaskRecord()]);
 
