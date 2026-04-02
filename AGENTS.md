@@ -16,6 +16,26 @@ Execute tests with `pnpm test`.
 ## Engineering Standards
 All code must use strict TypeScript. Avoid `any` unless justified. Prefer reuse of existing components and utilities. Keep functions small, composable, and clearly named. Follow the established folder structure and naming conventions. Do not introduce new dependencies without a clear technical reason.
 
+## Mandatory Security and Quality Scan
+For every non-doc code change, Codex must perform a security and code-quality scan before writing code and again before reporting completion. This is mandatory on every coding task, not optional.
+
+Before coding, scan for:
+
+* authentication, RBAC, ownership, and scope risks
+* input validation, parsing, normalization, and error handling needs
+* response leakage of secrets, tokens, internal fields, or raw persistence errors
+* schema, query, transaction, and index impact
+* maintainability risks such as duplication, mixed responsibilities, dead code, weak naming, or overly broad types
+* required tests and verification commands
+
+Before completion, scan again for:
+
+* authorization gaps or trust-boundary mistakes
+* missing validation or unsafe output shaping
+* nullability and edge-case bugs
+* performance regressions caused by new query paths
+* incomplete verification or overstated readiness
+
 ## Architecture
 Maintain clear separation of concerns. Route handlers and controllers are limited to request handling. Business logic belongs in services. Database access must remain isolated within the data layer. Do not mix UI logic with backend or domain logic. Keep modules isolated by domain, including authentication, workspaces, tasks, and collaboration.
 
@@ -77,8 +97,10 @@ Rules:
 * Codex must check applicable skills before writing code
 * If a skill applies, it must be followed strictly
 * Skills override improvisation
+* `security-quality-gate` must be applied for every non-doc code change
 * Skills are mandatory for:
 
+  * all non-doc code changes via `security-quality-gate`
   * TypeScript work
   * backend API work
   * Prisma/schema work
@@ -90,4 +112,4 @@ Rules:
 Failure to follow applicable skills is incorrect execution.
 
 ## Completion Checklist
-Before completing any task, ensure the code compiles without type errors, linting passes, inputs are validated, authentication and RBAC are enforced, no sensitive data is exposed, and all changes are clearly explained along with any risks or follow-up work.
+Before completing any task, ensure the security and code-quality scan was performed, the code compiles without type errors, linting passes, inputs are validated, authentication and RBAC are enforced, no sensitive data is exposed, and all changes are clearly explained along with any risks or follow-up work.

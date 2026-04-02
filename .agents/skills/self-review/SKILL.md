@@ -28,9 +28,10 @@ Do not use when:
 
 * re-read the task
 * re-check `AGENTS.md`, `PLANS.md`, and applicable skills
+* confirm `security-quality-gate` was applied if code changed
 * inspect changed files
 * verify task fidelity
-* verify applicable safety, security, and performance rules
+* verify applicable safety, security, performance, and code-quality rules
 * verify tests and checks actually ran when applicable
 * report risks honestly
 * state partial verification honestly if needed
@@ -47,6 +48,7 @@ Do not use when:
 
 * task fully matched
 * relevant skills followed
+* security and quality scan confirmed
 * verification performed honestly
 * remaining risks stated clearly
 * completion summary accurate

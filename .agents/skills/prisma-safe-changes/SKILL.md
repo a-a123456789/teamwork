@@ -35,6 +35,7 @@ Do not use when:
 * preserve ownership, invitation, membership, and task or workspace invariants
 * keep changes intentional and minimal
 * prefer strengthening guarantees over loosening them
+* add or adjust indexes when new production query patterns would otherwise create avoidable scan-heavy lookups
 
 # Forbidden behavior
 
@@ -51,4 +52,5 @@ Do not use when:
 * invariants preserved
 * transactions used where needed
 * relation, nullability, and uniqueness decisions justified
+* index impact reviewed for new query paths
 * migration risk acceptable

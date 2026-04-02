@@ -32,12 +32,14 @@ Follow this sequence:
 
 1. read existing code
 2. understand module and nearby patterns
-3. update DTOs, contracts, or types where appropriate
-4. implement service logic
-5. wire controller, module, or guards correctly
-6. add or update tests
-7. run verification
-8. summarize changes accurately
+3. run the `security-quality-gate` pre-code scan
+4. update DTOs, contracts, or types where appropriate
+5. implement service logic
+6. wire controller, module, or guards correctly
+7. add or update tests
+8. run verification
+9. run the `security-quality-gate` post-code scan
+10. summarize changes accurately
 
 Additional requirements:
 
@@ -45,10 +47,12 @@ Additional requirements:
 * keep business rules in services
 * match existing patterns before introducing new ones
 * keep changes scoped
+* apply industry-standard readability and maintainability judgment, not just functional correctness
 
 # Forbidden behavior
 
 * coding before reading context
+* coding before the required security and quality scan
 * inventing new patterns unnecessarily
 * burying business rules in controllers
 * skipping tests
@@ -58,6 +62,7 @@ Additional requirements:
 # Delivery checklist
 
 * related files read first
+* security and quality scan performed before and after implementation
 * DTOs or contracts updated where needed
 * tests added or updated
 * lint, typecheck, and tests run when applicable

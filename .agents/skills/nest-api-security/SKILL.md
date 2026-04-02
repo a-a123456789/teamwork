@@ -31,11 +31,13 @@ Do not use when:
 * validate all external input
 * treat params, query, body, headers, cookies, and JWT claims as untrusted until validated and authorized
 * enforce object-level authorization for resource IDs
+* enforce safe list and filter scoping so query params cannot widen access beyond the authenticated user's allowed resources
 * preserve RBAC and business rules
 * use explicit field allowlists for writes
 * shape response payloads intentionally
 * convert internal errors to safe client-facing errors
 * keep controllers thin and business rules in services
+* review new query paths for leak risks, denial-by-default behavior, and acceptable query performance
 
 # Forbidden behavior
 
@@ -54,3 +56,4 @@ Do not use when:
 * responses intentionally shaped
 * no mass assignment
 * no raw internal error leakage
+* list and filter endpoints scoped safely

@@ -237,3 +237,167 @@ Before reporting completion:
 3. Only then report completion
 
 Skipping skill alignment is incorrect execution.
+
+---
+
+## Feature: Task Deadlines and Filtered Task Inbox (Backend)
+
+## Overview
+
+This feature extends the existing task backend with date-only deadlines, filtered task listing, and a global authenticated task inbox across all workspaces the user belongs to. It is designed to support future task list, workspace filter, and calendar-style UI work without changing the canonical task detail route structure.
+
+## Scope
+
+Included:
+
+* add nullable `dueDate` support to tasks
+* allow deadline reads and writes through task create and update APIs
+* add filtered workspace task listing
+* add authenticated global task inbox listing across accessible workspaces
+* support assignment filters and due-date bucket filters
+* preserve canonical workspace-scoped task detail routes
+* add backend tests for DTO validation, filtering, authorization, and date parsing
+
+Excluded:
+
+* external calendar provider sync
+* reminders or notifications
+* due times or timezone-specific scheduling
+* internal tabs or frontend-only task UX
+* global task detail endpoint
+
+## Architecture Impact
+
+Backend modules affected:
+
+* `tasks`
+* `prisma`
+* `packages/types`
+
+Responsibilities:
+
+* `tasks` DTOs validate `dueDate`, `workspaceId`, `dueBucket`, `assignment`, and `referenceDate`
+* `tasks` service owns filter semantics, date parsing, response shaping, and service-level authorization
+* `tasks` controllers expose workspace-scoped and global inbox list routes without duplicating business logic
+* `prisma` stores deadlines as nullable database dates and adds supporting indexes for new filter patterns
+* `packages/types` exposes stable task and filter contracts shared across apps
+
+## API Design
+
+### Task List Endpoints
+
+* GET `/workspaces/:workspaceId/tasks`
+
+  * protected by JWT plus workspace membership guard
+  * supports query filters for `dueBucket`, `assignment`, and `referenceDate`
+  * optional `workspaceId` query param, when present, must match the route param
+
+* GET `/tasks`
+
+  * protected by JWT
+  * returns tasks only from workspaces the authenticated user belongs to
+  * supports optional `workspaceId`, `dueBucket`, `assignment`, and `referenceDate`
+  * when `workspaceId` is provided, service-layer membership validation is still required
+
+### Task Write Endpoints
+
+* POST `/workspaces/:workspaceId/tasks`
+
+  * request supports `dueDate?: YYYY-MM-DD | null`
+
+* PATCH `/workspaces/:workspaceId/tasks/:taskId`
+
+  * request supports `dueDate?: YYYY-MM-DD | null`
+
+### Canonical Detail Route
+
+* Keep GET `/workspaces/:workspaceId/tasks/:taskId` unchanged
+* Do not add a global task detail endpoint in this slice
+* Continue relying on `workspaceId` returned in task summaries for future client navigation
+
+## Database Impact
+
+### Task Table Changes
+
+tasks
+
+* add `due_date` as nullable `DATE`
+* add supporting index on `(workspace_id, due_date)` for workspace deadline filtering
+
+### Constraints and Rules
+
+* deadlines are date-only, not timestamps
+* invalid calendar dates must be rejected
+* blank deadline input normalizes to `null`
+* schema changes must ship with migrations
+
+## Filter Rules
+
+### Due Bucket Semantics
+
+* `past_due`: `dueDate < referenceDate` and status is not `done`
+* `today`: `dueDate = referenceDate`
+* `upcoming`: `dueDate > referenceDate`
+* `no_date`: `dueDate IS NULL`
+
+### Assignment Semantics
+
+* `all`: no assignee constraint
+* `me`: `assigneeUserId = currentUserId`
+* `unassigned`: `assigneeUserId IS NULL`
+
+### Reference Date
+
+* accepts `YYYY-MM-DD`
+* if omitted, defaults to the server's current UTC date
+* must be validated before any database query runs
+
+## Security and Quality Requirements
+
+* validate all route params, query params, and body fields through DTOs
+* treat `workspaceId`, `referenceDate`, `dueBucket`, and `assignment` as untrusted input
+* keep membership and object access checks in the service layer, not only controller guards
+* never expose raw Prisma or internal error details
+* preserve thin controllers and concentrated business rules in services
+* keep response payloads intentional and stable
+* add indexes when new filter paths are introduced
+* update tests for success paths, rejection paths, and authorization boundaries
+
+## Validation Steps
+
+* DTO tests cover valid and invalid `dueDate`
+* DTO tests cover omitted and null deadline behavior
+* service tests cover deadline create, update, clear, and serialization
+* service tests cover each due bucket and assignment filter
+* service tests confirm inbox filtering cannot bypass workspace membership
+* controller tests cover filter forwarding and inbox controller guard shape
+* lint, typecheck, and tests must be run before reporting completion
+
+## Success Criteria
+
+* deadlines can be created, updated, cleared, and returned safely
+* workspace task lists support stable filtered reads
+* global inbox lists only tasks from authorized workspaces
+* canonical workspace task detail routing remains unchanged
+* filtering rules are test-covered and predictable
+* security and code-quality checks are applied before completion
+
+## Skill-Aware Execution
+
+All implementation must follow applicable skills from `.agents/skills`.
+
+Before coding:
+
+1. Identify relevant skills
+2. Apply `security-quality-gate`
+3. Apply domain-specific skills such as `backend-feature-delivery`, `nest-api-security`, `prisma-safe-changes`, and `typescript-strict`
+4. Then implement
+
+Before reporting completion:
+
+1. Re-run `security-quality-gate`
+2. Apply the `self-review` skill
+3. Verify work against `AGENTS.md`, `PLANS.md`, and task requirements
+4. Only then report completion
+
+Skipping security or skill alignment is incorrect execution.
