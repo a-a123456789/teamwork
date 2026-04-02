@@ -108,7 +108,6 @@ export class WorkspaceInvitationsService {
       const db = toInvitationDatabase(tx);
 
       await this.ensureNoActiveInvitation(workspaceId, normalizedEmail, db);
-      await this.ensureNotAlreadyMember(workspaceId, normalizedEmail, tx);
       const token = createInvitationToken();
       const invitation = await this.createInvitation(
         {
@@ -317,31 +316,6 @@ export class WorkspaceInvitationsService {
       }
 
       throw error;
-    }
-  }
-
-  private async ensureNotAlreadyMember(
-    workspaceId: string,
-    email: string,
-    db: Prisma.TransactionClient | PrismaService,
-  ): Promise<void> {
-    const existingUser = await this.usersService.findByEmail(email, db);
-
-    if (!existingUser) {
-      return;
-    }
-
-    const membership = await toInvitationDatabase(db).workspaceMembership.findUnique({
-      where: {
-        workspaceId_userId: {
-          workspaceId,
-          userId: existingUser.id,
-        },
-      },
-    });
-
-    if (membership) {
-      throw new ConflictException('The user is already a member of this workspace.');
     }
   }
 
