@@ -48,6 +48,10 @@ interface ListTasksForWorkspaceInput extends TaskListFilters {
   currentUserId: string;
 }
 
+interface ListTasksForUserInput extends TaskListFilters {
+  currentUserId: string;
+}
+
 interface TaskRepository {
   create<T extends Prisma.TaskCreateArgs>(
     args: Prisma.SelectSubset<T, Prisma.TaskCreateArgs>,
@@ -127,6 +131,24 @@ export class TasksService {
   async listTasksForWorkspace(input: ListTasksForWorkspaceInput): Promise<TaskSummary[]> {
     await this.membershipsService.requireMembership(input.workspaceId, input.currentUserId);
 
+    return this.listTasks(input);
+  }
+
+  async listTasksForUser(
+    currentUserId: string,
+    filters: TaskListFilters,
+  ): Promise<TaskSummary[]> {
+    if (filters.workspaceId) {
+      await this.membershipsService.requireMembership(filters.workspaceId, currentUserId);
+    }
+
+    return this.listTasks({
+      currentUserId,
+      ...filters,
+    });
+  }
+
+  private async listTasks(input: ListTasksForUserInput): Promise<TaskSummary[]> {
     const tasks = await toTaskDatabase(this.prisma).task.findMany({
       where: this.buildTaskListWhere(input),
       select: taskDetailsSelect,
@@ -319,11 +341,29 @@ export class TasksService {
     return parsedDueDate;
   }
 
-  private buildTaskListWhere(input: ListTasksForWorkspaceInput): Prisma.TaskWhereInput {
+  private buildTaskListWhere(input: ListTasksForUserInput): Prisma.TaskWhereInput {
     return {
-      workspaceId: input.workspaceId,
+      ...this.buildTaskListScopeFilter(input),
       ...this.buildAssignmentFilter(input.assignment ?? 'all', input.currentUserId),
       ...this.buildDueBucketFilter(input.dueBucket, input.referenceDate),
+    };
+  }
+
+  private buildTaskListScopeFilter(input: ListTasksForUserInput): Prisma.TaskWhereInput {
+    if (input.workspaceId) {
+      return {
+        workspaceId: input.workspaceId,
+      };
+    }
+
+    return {
+      workspace: {
+        memberships: {
+          some: {
+            userId: input.currentUserId,
+          },
+        },
+      },
     };
   }
 
