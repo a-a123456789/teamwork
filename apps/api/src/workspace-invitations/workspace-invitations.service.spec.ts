@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { WorkspaceRole as PrismaWorkspaceRole } from '@prisma/client';
@@ -154,7 +154,7 @@ describe('WorkspaceInvitationsService', () => {
     service = moduleRef.get(WorkspaceInvitationsService);
   });
 
-  it('creates a pending invitation for an existing user who is not yet a member', async () => {
+  it('creates a pending invitation for an existing user', async () => {
     usersService.findByEmail.mockResolvedValueOnce({
       id: 'user-2',
       email: 'member@example.com',
@@ -162,7 +162,6 @@ describe('WorkspaceInvitationsService', () => {
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
       updatedAt: new Date('2026-03-26T00:00:00.000Z'),
     });
-    prisma.workspaceMembership.findUnique.mockResolvedValueOnce(null);
     prisma.workspaceInvitation.create.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
@@ -192,6 +191,7 @@ describe('WorkspaceInvitationsService', () => {
     });
     expect(membershipsService.createMembership).not.toHaveBeenCalled();
     expect(prisma.workspaceInvitation.create).toHaveBeenCalled();
+    expect(prisma.workspaceMembership.findUnique).not.toHaveBeenCalled();
   });
 
   it('creates a pending invitation for an unknown email', async () => {
@@ -245,7 +245,7 @@ describe('WorkspaceInvitationsService', () => {
     });
   });
 
-  it('rejects inviting a user who is already a workspace member', async () => {
+  it('creates a pending invitation even when the email belongs to an existing member', async () => {
     usersService.findByEmail.mockResolvedValueOnce({
       id: 'user-2',
       email: 'member@example.com',
@@ -253,19 +253,29 @@ describe('WorkspaceInvitationsService', () => {
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
       updatedAt: new Date('2026-03-26T00:00:00.000Z'),
     });
-    prisma.workspaceMembership.findUnique.mockResolvedValueOnce({
-      id: 'membership-1',
+    prisma.workspaceInvitation.create.mockResolvedValueOnce({
+      id: invitationId,
       workspaceId,
-      userId: 'user-2',
+      email: 'member@example.com',
       role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-02T00:00:00.000Z'),
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: null,
     });
 
-    await expect(
-      service.inviteMember(workspaceId, 'member@example.com', 'member', 'owner-1'),
-    ).rejects.toBeInstanceOf(ConflictException);
+    const result = await service.inviteMember(
+      workspaceId,
+      'member@example.com',
+      'member',
+      'owner-1',
+    );
 
-    expect(prisma.workspaceInvitation.create).not.toHaveBeenCalled();
+    expect(result.kind).toBe('invitation');
+    expect(result.invitation.email).toBe('member@example.com');
+    expect(prisma.workspaceInvitation.create).toHaveBeenCalled();
+    expect(prisma.workspaceMembership.findUnique).not.toHaveBeenCalled();
   });
 
   it('rejects duplicate active invitations', async () => {
@@ -276,6 +286,42 @@ describe('WorkspaceInvitationsService', () => {
     await expect(
       service.inviteMember(workspaceId, 'invitee@example.com', 'member', 'owner-1'),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('normalizes the email before checking for existing active invites and storing it', async () => {
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce(null);
+    prisma.workspaceInvitation.create.mockResolvedValueOnce({
+      id: invitationId,
+      workspaceId,
+      email: 'invitee@example.com',
+      role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-02T00:00:00.000Z'),
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: null,
+    });
+
+    const result = await service.inviteMember(
+      workspaceId,
+      ' Invitee@Example.com ',
+      'member',
+      'owner-1',
+    );
+
+    expect(prisma.workspaceInvitation.findFirst).toHaveBeenCalledWith({
+      where: {
+        workspaceId,
+        email: 'invitee@example.com',
+        acceptedAt: null,
+        revokedAt: null,
+      },
+      select: { id: true },
+    });
+
+    const createArgs = getCreateInvitationArgs(prisma.workspaceInvitation.create);
+    expect(createArgs?.data.email).toBe('invitee@example.com');
+    expect(result.invitation.email).toBe('invitee@example.com');
   });
 
   it('translates invitation unique-index conflicts into a conflict response', async () => {
@@ -355,6 +401,17 @@ describe('WorkspaceInvitationsService', () => {
         email: 'different@example.com',
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects accepting an invitation that does not exist', async () => {
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce(null);
+
+    await expect(
+      service.acceptInvitation(invitationId, {
+        id: 'user-2',
+        email: 'invitee@example.com',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('accepts an invitation by creating a membership and marking it accepted', async () => {
