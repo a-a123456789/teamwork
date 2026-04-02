@@ -7,6 +7,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     DATABASE_URL: readString(config['DATABASE_URL']) ?? DEFAULT_DATABASE_URL,
     JWT_SECRET: readString(config['JWT_SECRET']) ?? DEFAULT_JWT_SECRET,
     JWT_EXPIRES_IN: readString(config['JWT_EXPIRES_IN']) ?? '15m',
+    APP_URL: readString(config['APP_URL']) ?? 'http://localhost:3000',
     PORT: Number.parseInt(readString(config['PORT']) ?? '3000', 10),
   };
 }

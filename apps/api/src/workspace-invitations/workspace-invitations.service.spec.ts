@@ -1,4 +1,5 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { WorkspaceRole as PrismaWorkspaceRole } from '@prisma/client';
 import type { UserSummary, WorkspaceMemberDetail } from '@teamwork/types';
@@ -46,6 +47,9 @@ describe('WorkspaceInvitationsService', () => {
     getByIdOrThrow: jest.Mock;
   };
   let service: WorkspaceInvitationsService;
+  let configService: {
+    get: jest.Mock;
+  };
 
   beforeEach(async () => {
     const runInTransaction = <T>(callback: (tx: typeof prisma) => Promise<T>): Promise<T> =>
@@ -88,6 +92,9 @@ describe('WorkspaceInvitationsService', () => {
           toMemberDetail(membership, user),
       ),
     };
+    configService = {
+      get: jest.fn((key: string) => (key === 'APP_URL' ? 'http://localhost:3000' : undefined)),
+    };
     usersService = {
       findByEmail: jest.fn(),
       getByIdOrThrow: jest.fn(),
@@ -97,6 +104,7 @@ describe('WorkspaceInvitationsService', () => {
       providers: [
         WorkspaceInvitationsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: ConfigService, useValue: configService },
         { provide: MembershipsService, useValue: membershipsService },
         { provide: UsersService, useValue: usersService },
       ],
@@ -105,7 +113,7 @@ describe('WorkspaceInvitationsService', () => {
     service = moduleRef.get(WorkspaceInvitationsService);
   });
 
-  it('creates a membership immediately for an existing user', async () => {
+  it('creates a pending invitation for an existing user who is not yet a member', async () => {
     usersService.findByEmail.mockResolvedValueOnce({
       id: 'user-2',
       email: 'member@example.com',
@@ -113,12 +121,17 @@ describe('WorkspaceInvitationsService', () => {
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
       updatedAt: new Date('2026-03-26T00:00:00.000Z'),
     });
-    membershipsService.createMembership.mockResolvedValueOnce({
-      id: 'membership-1',
+    prisma.workspaceMembership.findUnique.mockResolvedValueOnce(null);
+    prisma.workspaceInvitation.create.mockResolvedValueOnce({
+      id: invitationId,
       workspaceId,
-      userId: 'user-2',
+      email: 'member@example.com',
       role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-02T00:00:00.000Z'),
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: null,
     });
 
     const result = await service.inviteMember(
@@ -128,9 +141,16 @@ describe('WorkspaceInvitationsService', () => {
       'owner-1',
     );
 
-    expect(result.kind).toBe('membership');
-    expect(membershipsService.createMembership).toHaveBeenCalled();
-    expect(prisma.workspaceInvitation.create).not.toHaveBeenCalled();
+    expect(result.kind).toBe('invitation');
+    expect(result.token).toEqual(expect.any(String));
+    expect(result.inviteUrl).toBe(`http://localhost:3000/invitations/accept?token=${result.token}`);
+    expect(result.invitation).toMatchObject({
+      id: invitationId,
+      email: 'member@example.com',
+      expiresAt: '2026-04-02T00:00:00.000Z',
+    });
+    expect(membershipsService.createMembership).not.toHaveBeenCalled();
+    expect(prisma.workspaceInvitation.create).toHaveBeenCalled();
   });
 
   it('creates a pending invitation for an unknown email', async () => {
@@ -141,6 +161,7 @@ describe('WorkspaceInvitationsService', () => {
       email: 'invitee@example.com',
       role: PrismaWorkspaceRole.member,
       invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-02T00:00:00.000Z'),
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
       acceptedAt: null,
       revokedAt: null,
@@ -158,7 +179,10 @@ describe('WorkspaceInvitationsService', () => {
       invitation: {
         id: invitationId,
         email: 'invitee@example.com',
+        expiresAt: '2026-04-02T00:00:00.000Z',
       },
+      token: expect.any(String),
+      inviteUrl: expect.stringContaining('/invitations/accept?token='),
     });
     expect(prisma.workspaceInvitation.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -175,11 +199,35 @@ describe('WorkspaceInvitationsService', () => {
         email: true,
         role: true,
         invitedByUserId: true,
+        expiresAt: true,
         createdAt: true,
         acceptedAt: true,
         revokedAt: true,
       },
     });
+  });
+
+  it('rejects inviting a user who is already a workspace member', async () => {
+    usersService.findByEmail.mockResolvedValueOnce({
+      id: 'user-2',
+      email: 'member@example.com',
+      displayName: 'Member',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    prisma.workspaceMembership.findUnique.mockResolvedValueOnce({
+      id: 'membership-1',
+      workspaceId,
+      userId: 'user-2',
+      role: PrismaWorkspaceRole.member,
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+
+    await expect(
+      service.inviteMember(workspaceId, 'member@example.com', 'member', 'owner-1'),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(prisma.workspaceInvitation.create).not.toHaveBeenCalled();
   });
 
   it('rejects duplicate active invitations', async () => {
@@ -209,6 +257,7 @@ describe('WorkspaceInvitationsService', () => {
       email: 'invitee@example.com',
       role: PrismaWorkspaceRole.member,
       invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-02T00:00:00.000Z'),
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
       acceptedAt: null,
       revokedAt: null,
@@ -281,6 +330,7 @@ describe('WorkspaceInvitationsService', () => {
         email: 'invitee@example.com',
         role: PrismaWorkspaceRole.member,
         invitedByUserId: 'owner-1',
+        expiresAt: new Date('2026-04-02T00:00:00.000Z'),
         createdAt: new Date('2026-03-26T00:00:00.000Z'),
         acceptedAt: null,
         revokedAt: null,
@@ -309,6 +359,7 @@ describe('WorkspaceInvitationsService', () => {
         email: true,
         role: true,
         invitedByUserId: true,
+        expiresAt: true,
         createdAt: true,
         acceptedAt: true,
         revokedAt: true,
