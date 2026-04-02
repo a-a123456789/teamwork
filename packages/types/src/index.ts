@@ -31,6 +31,7 @@ export interface WorkspaceInvitationSummary {
   email: string;
   role: WorkspaceRole;
   invitedByUserId: ID;
+  expiresAt: string;
   createdAt: string;
   acceptedAt: string | null;
   revokedAt: string | null;
@@ -83,15 +84,12 @@ export interface TaskDeleteResponse {
   success: true;
 }
 
-export type InviteWorkspaceMemberResult =
-  | {
-      kind: 'membership';
-      membership: WorkspaceMemberDetail;
-    }
-  | {
-      kind: 'invitation';
-      invitation: WorkspaceInvitationSummary;
-    };
+export interface InviteWorkspaceMemberResult {
+  kind: 'invitation';
+  invitation: WorkspaceInvitationSummary;
+  token: string;
+  inviteUrl: string;
+}
 
 export interface AuthPayload {
   user: UserSummary;

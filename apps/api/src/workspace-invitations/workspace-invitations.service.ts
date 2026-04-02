@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'node:crypto';
 import { Prisma, type WorkspaceInvitation } from '@prisma/client';
 import { normalizeEmail } from '@teamwork/validation';
@@ -25,6 +26,7 @@ const invitationSummarySelect = {
   email: true,
   role: true,
   invitedByUserId: true,
+  expiresAt: true,
   createdAt: true,
   acceptedAt: true,
   revokedAt: true,
@@ -91,6 +93,7 @@ function toInvitationDatabase(db: Prisma.TransactionClient | PrismaService): Inv
 export class WorkspaceInvitationsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
     private readonly membershipsService: MembershipsService,
     private readonly usersService: UsersService,
   ) {}
@@ -107,29 +110,13 @@ export class WorkspaceInvitationsService {
       const db = toInvitationDatabase(tx);
 
       await this.ensureNoActiveInvitation(workspaceId, normalizedEmail, db);
-
-      const existingUser = await this.usersService.findByEmail(normalizedEmail, tx);
-
-      if (existingUser) {
-        const membership = await this.membershipsService.createMembership(
-          {
-            workspaceId,
-            userId: existingUser.id,
-            role,
-          },
-          tx,
-        );
-
-        return {
-          kind: 'membership',
-          membership: this.membershipsService.toDetail(membership, existingUser),
-        };
-      }
-
+      await this.ensureNotAlreadyMember(workspaceId, normalizedEmail, tx);
+      const token = createInvitationToken();
       const invitation = await this.createInvitation(
         {
           workspaceId,
           email: normalizedEmail,
+          token,
           role,
           invitedByUserId,
         },
@@ -139,6 +126,8 @@ export class WorkspaceInvitationsService {
       return {
         kind: 'invitation',
         invitation: this.toSummary(invitation),
+        token,
+        inviteUrl: this.buildInviteUrl(token),
       };
     });
   }
@@ -281,6 +270,7 @@ export class WorkspaceInvitationsService {
       | 'email'
       | 'role'
       | 'invitedByUserId'
+      | 'expiresAt'
       | 'createdAt'
       | 'acceptedAt'
       | 'revokedAt'
@@ -292,6 +282,7 @@ export class WorkspaceInvitationsService {
       email: invitation.email,
       role: invitation.role,
       invitedByUserId: invitation.invitedByUserId,
+      expiresAt: invitation.expiresAt.toISOString(),
       createdAt: invitation.createdAt.toISOString(),
       acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
       revokedAt: invitation.revokedAt?.toISOString() ?? null,
@@ -302,18 +293,21 @@ export class WorkspaceInvitationsService {
     input: {
       workspaceId: string;
       email: string;
+      token: string;
       role: WorkspaceRole;
       invitedByUserId: string;
     },
     db: InvitationDatabase,
   ): Promise<InvitationSummaryRecord> {
+    const expiresAt = createInvitationExpiresAt();
+
     try {
       return await db.workspaceInvitation.create({
         data: {
           workspaceId: input.workspaceId,
           email: input.email,
-          tokenHash: createInvitationTokenHash(),
-          expiresAt: createInvitationExpiresAt(),
+          tokenHash: createInvitationTokenHash(input.token),
+          expiresAt,
           role: input.role,
           invitedByUserId: input.invitedByUserId,
         },
@@ -325,6 +319,31 @@ export class WorkspaceInvitationsService {
       }
 
       throw error;
+    }
+  }
+
+  private async ensureNotAlreadyMember(
+    workspaceId: string,
+    email: string,
+    db: Prisma.TransactionClient | PrismaService,
+  ): Promise<void> {
+    const existingUser = await this.usersService.findByEmail(email, db);
+
+    if (!existingUser) {
+      return;
+    }
+
+    const membership = await toInvitationDatabase(db).workspaceMembership.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId: existingUser.id,
+        },
+      },
+    });
+
+    if (membership) {
+      throw new ConflictException('The user is already a member of this workspace.');
     }
   }
 
@@ -358,14 +377,23 @@ export class WorkspaceInvitationsService {
       updatedAt: workspace.updatedAt.toISOString(),
     };
   }
+
+  private buildInviteUrl(token: string): string {
+    const appUrl = this.configService.get<string>('APP_URL') ?? 'http://localhost:3000';
+    return new URL(`/invitations/accept?token=${encodeURIComponent(token)}`, appUrl).toString();
+  }
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
   return isPrismaErrorCode(error, 'P2002');
 }
 
-function createInvitationTokenHash(): string {
-  return createHash('sha256').update(randomBytes(32)).digest('hex');
+function createInvitationToken(): string {
+  return randomBytes(32).toString('hex');
+}
+
+function createInvitationTokenHash(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
 }
 
 function createInvitationExpiresAt(from = new Date()): Date {
