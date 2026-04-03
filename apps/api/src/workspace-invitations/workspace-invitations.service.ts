@@ -82,6 +82,14 @@ interface InvitationDatabase {
   workspaceMembership: WorkspaceMembershipRepository;
 }
 
+type AcceptInvitationLookup =
+  | {
+      invitationId: string;
+    }
+  | {
+      token: string;
+    };
+
 function toInvitationDatabase(db: Prisma.TransactionClient | PrismaService): InvitationDatabase {
   return {
     workspaceInvitation: db.workspaceInvitation,
@@ -221,31 +229,22 @@ export class WorkspaceInvitationsService {
     invitationId: string,
     user: Pick<RequestUser, 'id' | 'email'>,
   ): Promise<{ membership: ReturnType<MembershipsService['toDetail']> }> {
-    return this.prisma.$transaction(async (tx) => {
-      const db = toInvitationDatabase(tx);
-      const invitation = await db.workspaceInvitation.findFirst({
-        where: {
-          id: invitationId,
-        },
-        select: invitationSummarySelect,
-      });
-
-      return this.acceptExistingInvitation(invitation, user, tx);
-    });
+    return this.acceptInvitationWithLookup({ invitationId }, user);
   }
 
   async acceptInvitationByToken(
     token: string,
     user: Pick<RequestUser, 'id' | 'email'>,
   ): Promise<{ membership: ReturnType<MembershipsService['toDetail']> }> {
+    return this.acceptInvitationWithLookup({ token }, user);
+  }
+
+  private async acceptInvitationWithLookup(
+    lookup: AcceptInvitationLookup,
+    user: Pick<RequestUser, 'id' | 'email'>,
+  ): Promise<{ membership: ReturnType<MembershipsService['toDetail']> }> {
     return this.prisma.$transaction(async (tx) => {
-      const db = toInvitationDatabase(tx);
-      const invitation = await db.workspaceInvitation.findFirst({
-        where: {
-          tokenHash: createInvitationTokenHash(token),
-        },
-        select: invitationSummarySelect,
-      });
+      const invitation = await this.findInvitationForAcceptance(lookup, tx);
 
       return this.acceptExistingInvitation(invitation, user, tx);
     });
@@ -374,6 +373,21 @@ export class WorkspaceInvitationsService {
     }
 
     return 'pending';
+  }
+
+  private async findInvitationForAcceptance(
+    lookup: AcceptInvitationLookup,
+    tx: Prisma.TransactionClient,
+  ): Promise<InvitationSummaryRecord | null> {
+    const where =
+      'token' in lookup
+        ? { tokenHash: createInvitationTokenHash(lookup.token) }
+        : { id: lookup.invitationId };
+
+    return tx.workspaceInvitation.findFirst({
+      where,
+      select: invitationSummarySelect,
+    });
   }
 
   private async acceptExistingInvitation(
