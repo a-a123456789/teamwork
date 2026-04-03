@@ -51,4 +51,18 @@ describe('WorkspaceInvitationsController', () => {
       user,
     );
   });
+
+  it('keeps the legacy invitation-id accept route wired through the service', async () => {
+    workspaceInvitationsService.acceptInvitation.mockResolvedValueOnce({
+      membership: { id: 'membership-1' },
+    });
+
+    await expect(controller.acceptInvitation(user, 'invitation-1')).resolves.toEqual({
+      membership: { id: 'membership-1' },
+    });
+    expect(workspaceInvitationsService.acceptInvitation).toHaveBeenCalledWith(
+      'invitation-1',
+      user,
+    );
+  });
 });

@@ -382,6 +382,75 @@ describe('WorkspaceInvitationsService', () => {
     }
   });
 
+  it('returns expiresAt in pending workspace invitation summaries', async () => {
+    prisma.workspaceInvitation.findMany.mockResolvedValueOnce([
+      {
+        id: invitationId,
+        workspaceId,
+        email: 'invitee@example.com',
+        role: PrismaWorkspaceRole.member,
+        invitedByUserId: 'owner-1',
+        expiresAt: new Date('2026-04-10T00:00:00.000Z'),
+        createdAt: new Date('2026-03-26T00:00:00.000Z'),
+        acceptedAt: null,
+        revokedAt: null,
+      },
+    ]);
+
+    await expect(service.listPendingInvitations(workspaceId)).resolves.toEqual([
+      {
+        id: invitationId,
+        workspaceId,
+        email: 'invitee@example.com',
+        role: 'member',
+        invitedByUserId: 'owner-1',
+        expiresAt: '2026-04-10T00:00:00.000Z',
+        createdAt: '2026-03-26T00:00:00.000Z',
+        acceptedAt: null,
+        revokedAt: null,
+      },
+    ]);
+  });
+
+  it('returns expiresAt in revoked invitation summaries', async () => {
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+      id: invitationId,
+      workspaceId,
+      email: 'invitee@example.com',
+      role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-10T00:00:00.000Z'),
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: null,
+    });
+    prisma.workspaceInvitation.update.mockResolvedValueOnce({
+      id: invitationId,
+      workspaceId,
+      email: 'invitee@example.com',
+      role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-10T00:00:00.000Z'),
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: new Date('2026-03-27T00:00:00.000Z'),
+    });
+
+    await expect(service.revokeInvitation(workspaceId, invitationId)).resolves.toEqual({
+      invitation: {
+        id: invitationId,
+        workspaceId,
+        email: 'invitee@example.com',
+        role: 'member',
+        invitedByUserId: 'owner-1',
+        expiresAt: '2026-04-10T00:00:00.000Z',
+        createdAt: '2026-03-26T00:00:00.000Z',
+        acceptedAt: null,
+        revokedAt: '2026-03-27T00:00:00.000Z',
+      },
+    });
+  });
+
   it('blocks accepting an invitation for another email', async () => {
     prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
       id: invitationId,
@@ -564,6 +633,56 @@ describe('WorkspaceInvitationsService', () => {
     expect(result.membership.user.email).toBe('invitee@example.com');
   });
 
+  it('keeps the legacy invitation-id accept flow on the same internal lookup path', async () => {
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+      id: invitationId,
+      workspaceId,
+      email: 'invitee@example.com',
+      role: PrismaWorkspaceRole.member,
+      expiresAt: new Date('2026-04-10T00:00:00.000Z'),
+      invitedByUserId: 'owner-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: null,
+    });
+    prisma.workspaceMembership.findUnique.mockResolvedValueOnce(null);
+    membershipsService.createMembership.mockResolvedValueOnce({
+      id: 'membership-1',
+      workspaceId,
+      userId: 'user-2',
+      role: PrismaWorkspaceRole.member,
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    usersService.getByIdOrThrow.mockResolvedValueOnce({
+      id: 'user-2',
+      email: 'invitee@example.com',
+      displayName: 'Invitee',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    prisma.workspaceInvitation.update.mockResolvedValueOnce({});
+
+    await service.acceptInvitation(invitationId, {
+      id: 'user-2',
+      email: 'invitee@example.com',
+    });
+
+    expect(prisma.workspaceInvitation.findFirst).toHaveBeenCalledWith({
+      where: { id: invitationId },
+      select: {
+        id: true,
+        workspaceId: true,
+        email: true,
+        role: true,
+        invitedByUserId: true,
+        expiresAt: true,
+        createdAt: true,
+        acceptedAt: true,
+        revokedAt: true,
+      },
+    });
+  });
+
   it('accepts an invitation by token after hashing the incoming token', async () => {
     prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
       id: invitationId,
@@ -700,6 +819,27 @@ describe('WorkspaceInvitationsService', () => {
       orderBy: { createdAt: 'asc' },
     });
     expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      invitation: {
+        id: invitationId,
+        workspaceId,
+        email: 'invitee@example.com',
+        role: 'member',
+        invitedByUserId: 'owner-1',
+        expiresAt: '2026-04-02T00:00:00.000Z',
+        createdAt: '2026-03-26T00:00:00.000Z',
+        acceptedAt: null,
+        revokedAt: null,
+      },
+      workspace: {
+        id: workspaceId,
+        name: 'Workspace',
+        slug: 'workspace',
+        createdByUserId: 'owner-1',
+        createdAt: '2026-03-26T00:00:00.000Z',
+        updatedAt: '2026-03-26T00:00:00.000Z',
+      },
+    });
   });
 
   it('returns public invitation metadata for a valid token', async () => {
