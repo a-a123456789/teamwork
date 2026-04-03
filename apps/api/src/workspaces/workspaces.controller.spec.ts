@@ -38,4 +38,14 @@ describe('WorkspacesController authorization metadata', () => {
     ]);
     expect(Reflect.getMetadata(WORKSPACE_ROLES_KEY, handler)).toEqual(['owner']);
   });
+
+  it('keeps the owner-only invite route enforced', () => {
+    const handler = controllerPrototype.addMember;
+
+    expect(Reflect.getMetadata(GUARDS_METADATA, handler)).toEqual([
+      WorkspaceMemberGuard,
+      WorkspaceRoleGuard,
+    ]);
+    expect(Reflect.getMetadata(WORKSPACE_ROLES_KEY, handler)).toEqual(['owner']);
+  });
 });

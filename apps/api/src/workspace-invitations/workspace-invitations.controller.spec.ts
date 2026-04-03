@@ -1,4 +1,5 @@
 import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import { IS_PUBLIC_KEY } from '../common/decorators/public.decorator';
 import type { RequestUser } from '../common/interfaces/request-user.interface';
 import { JwtAuthGuard } from '../common/auth/jwt-auth.guard';
 import { WorkspaceInvitationsController } from './workspace-invitations.controller';
@@ -36,6 +37,24 @@ describe('WorkspaceInvitationsController', () => {
     expect(Reflect.getMetadata(GUARDS_METADATA, WorkspaceInvitationsController)).toEqual([
       JwtAuthGuard,
     ]);
+  });
+
+  it('public token lookup works without auth', () => {
+    expect(
+      Reflect.getMetadata(
+        IS_PUBLIC_KEY,
+        WorkspaceInvitationsController.prototype.getInvitationByToken,
+      ),
+    ).toBe(true);
+  });
+
+  it('token accept requires auth', () => {
+    expect(
+      Reflect.getMetadata(
+        IS_PUBLIC_KEY,
+        WorkspaceInvitationsController.prototype.acceptInvitationByToken,
+      ),
+    ).toBeUndefined();
   });
 
   it('accepts an invitation by token through the service', async () => {
