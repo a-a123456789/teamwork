@@ -194,7 +194,7 @@ describe('WorkspaceInvitationsService', () => {
     expect(prisma.workspaceMembership.findUnique).not.toHaveBeenCalled();
   });
 
-  it('creates a pending invitation for an unknown email', async () => {
+  it('invitation creation stores tokenHash and expiresAt', async () => {
     usersService.findByEmail.mockResolvedValueOnce(null);
     prisma.workspaceInvitation.create.mockResolvedValueOnce({
       id: invitationId,
@@ -245,7 +245,7 @@ describe('WorkspaceInvitationsService', () => {
     });
   });
 
-  it('creates a pending invitation even when the email belongs to an existing member', async () => {
+  it('existing users no longer get auto-added directly', async () => {
     usersService.findByEmail.mockResolvedValueOnce({
       id: 'user-2',
       email: 'member@example.com',
@@ -278,7 +278,7 @@ describe('WorkspaceInvitationsService', () => {
     expect(prisma.workspaceMembership.findUnique).not.toHaveBeenCalled();
   });
 
-  it('rejects duplicate active invitations', async () => {
+  it('duplicate pending invite is rejected', async () => {
     prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
       id: invitationId,
     });
@@ -683,7 +683,7 @@ describe('WorkspaceInvitationsService', () => {
     });
   });
 
-  it('accepts an invitation by token after hashing the incoming token', async () => {
+  it('accept-by-token creates membership and marks invitation accepted', async () => {
     prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
@@ -753,7 +753,7 @@ describe('WorkspaceInvitationsService', () => {
     expect(result.membership.user.email).toBe('invitee@example.com');
   });
 
-  it('rejects accepting by token when no invitation matches', async () => {
+  it('unknown tokens are rejected correctly during acceptance', async () => {
     prisma.workspaceInvitation.findFirst.mockResolvedValueOnce(null);
 
     await expect(
@@ -842,7 +842,7 @@ describe('WorkspaceInvitationsService', () => {
     });
   });
 
-  it('returns public invitation metadata for a valid token', async () => {
+  it('token lookup returns safe metadata', async () => {
     prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
@@ -1024,5 +1024,124 @@ describe('WorkspaceInvitationsService', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('accepted tokens are rejected correctly during acceptance', async () => {
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+      id: invitationId,
+      workspaceId,
+      email: 'invitee@example.com',
+      role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-10T00:00:00.000Z'),
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: new Date('2026-04-01T00:00:00.000Z'),
+      revokedAt: null,
+    });
+
+    await expect(
+      service.acceptInvitationByToken('accepted-token', {
+        id: 'user-2',
+        email: 'invitee@example.com',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('revoked tokens are rejected correctly during acceptance', async () => {
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+      id: invitationId,
+      workspaceId,
+      email: 'invitee@example.com',
+      role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-10T00:00:00.000Z'),
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: new Date('2026-04-01T00:00:00.000Z'),
+    });
+
+    await expect(
+      service.acceptInvitationByToken('revoked-token', {
+        id: 'user-2',
+        email: 'invitee@example.com',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('expired tokens are rejected correctly during acceptance', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-04-03T00:00:00.000Z'));
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+      id: invitationId,
+      workspaceId,
+      email: 'invitee@example.com',
+      role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-02T00:00:00.000Z'),
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: null,
+    });
+
+    try {
+      await expect(
+        service.acceptInvitationByToken('expired-token', {
+          id: 'user-2',
+          email: 'invitee@example.com',
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('wrong-email acceptance is rejected', async () => {
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+      id: invitationId,
+      workspaceId,
+      email: 'invitee@example.com',
+      role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-10T00:00:00.000Z'),
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: null,
+    });
+
+    await expect(
+      service.acceptInvitationByToken('plain-token', {
+        id: 'user-2',
+        email: 'different@example.com',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('already-member acceptance is rejected', async () => {
+    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+      id: invitationId,
+      workspaceId,
+      email: 'invitee@example.com',
+      role: PrismaWorkspaceRole.member,
+      invitedByUserId: 'owner-1',
+      expiresAt: new Date('2026-04-10T00:00:00.000Z'),
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      acceptedAt: null,
+      revokedAt: null,
+    });
+    prisma.workspaceMembership.findUnique.mockResolvedValueOnce({
+      id: 'membership-1',
+      workspaceId,
+      userId: 'user-2',
+      role: PrismaWorkspaceRole.member,
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+
+    await expect(
+      service.acceptInvitationByToken('plain-token', {
+        id: 'user-2',
+        email: 'invitee@example.com',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(membershipsService.createMembership).not.toHaveBeenCalled();
+    expect(prisma.workspaceInvitation.update).not.toHaveBeenCalled();
   });
 });
