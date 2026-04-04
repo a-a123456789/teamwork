@@ -11,35 +11,39 @@ interface AppShellHeaderProps {
 export function AppShellHeader({ routeContext }: AppShellHeaderProps) {
   const { actionOverride } = useAppShellAction();
   const action = actionOverride ?? routeContext.definition.action;
+  const actionClassName =
+    'inline-flex min-h-10 items-center justify-center rounded-[0.92rem] bg-accent px-[1.125rem] text-[0.94rem] font-semibold text-white transition-colors hover:bg-accent-strong';
+  const disabledActionClassName =
+    'inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-[0.92rem] bg-accent px-[1.125rem] text-[0.94rem] font-semibold text-white/80 opacity-60';
 
   return (
-    <header className="flex items-start justify-between gap-5 border-b border-line px-5 py-4 lg:px-8">
+    <header className="flex items-start justify-between gap-4 border-b border-line px-4 py-3.5 lg:px-6">
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">
           {routeContext.definition.eyebrow}
         </p>
-        <h1 className="mt-2.5 text-[2.35rem] font-semibold tracking-tight text-foreground">
+        <h1 className="mt-2 text-[2.15rem] font-semibold tracking-tight text-foreground">
           {routeContext.definition.title}
         </h1>
         {routeContext.definition.subtitle ? (
-          <p className="mt-2 max-w-2xl text-[0.96rem] leading-6 text-muted">
+          <p className="mt-1.5 max-w-2xl text-[0.94rem] leading-6 text-muted">
             {routeContext.definition.subtitle}
           </p>
         ) : null}
       </div>
-      <div className="flex min-h-11 items-start justify-end pt-1">
+      <div className="flex min-h-10 items-start justify-end pt-0.5">
         {action?.onAction ? (
           <button
             type="button"
             onClick={action.onAction}
-            className="inline-flex min-h-11 items-center justify-center rounded-[1rem] bg-accent px-5 text-[0.96rem] font-semibold text-white transition-colors hover:bg-accent-strong"
+            className={actionClassName}
           >
             {action.label}
           </button>
         ) : action?.href ? (
           <Link
             href={action.href}
-            className="inline-flex min-h-11 items-center justify-center rounded-[1rem] bg-accent px-5 text-[0.96rem] font-semibold text-white transition-colors hover:bg-accent-strong"
+            className={actionClassName}
           >
             {action.label}
           </Link>
@@ -47,7 +51,7 @@ export function AppShellHeader({ routeContext }: AppShellHeaderProps) {
           <button
             type="button"
             disabled
-            className="inline-flex min-h-11 cursor-not-allowed items-center justify-center rounded-[1rem] bg-accent px-5 text-[0.96rem] font-semibold text-white/80 opacity-60"
+            className={disabledActionClassName}
           >
             {action.label}
           </button>

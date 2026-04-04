@@ -52,9 +52,9 @@ export function TaskInboxPage({
       />
 
       {sortedTasks.length === 0 ? (
-        <div className="px-8 py-8">
-          <p className="text-lg font-semibold text-foreground">No tasks available</p>
-          <p className="mt-2 text-sm leading-6 text-muted">
+        <div className="px-[var(--section-padding-x)] py-7">
+          <p className="text-[1.1rem] font-semibold text-foreground">No tasks available</p>
+          <p className="mt-2 text-[0.94rem] leading-6 text-muted">
             Tasks assigned to your accessible workspaces will appear here.
           </p>
         </div>
@@ -77,22 +77,22 @@ export function TaskInboxPage({
 export function TaskInboxPageSkeleton() {
   return (
     <ContentPanel>
-      <div className="border-b border-line px-8 py-7">
-        <div className="h-10 w-48 animate-pulse rounded-2xl bg-black/10" />
-        <div className="mt-3 h-6 w-80 animate-pulse rounded-2xl bg-black/5" />
+      <div className="border-b border-line px-[var(--section-padding-x)] py-[var(--section-padding-y)]">
+        <div className="h-9 w-44 animate-pulse rounded-[0.95rem] bg-black/10" />
+        <div className="mt-2.5 h-5 w-72 animate-pulse rounded-[0.9rem] bg-black/5" />
       </div>
 
       <div className="divide-y divide-line">
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={String(index)} className="px-8 py-5">
+          <div key={String(index)} className="px-[var(--section-padding-x)] py-[1.125rem]">
             <div className="h-4 w-28 animate-pulse rounded-full bg-black/6" />
-            <div className="mt-4 h-6 w-60 animate-pulse rounded-full bg-black/10" />
-            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-black/5" />
+            <div className="mt-3.5 h-6 w-60 animate-pulse rounded-full bg-black/10" />
+            <div className="mt-2.5 h-4 w-full animate-pulse rounded-full bg-black/5" />
             <div className="mt-2 h-4 w-2/3 animate-pulse rounded-full bg-black/5" />
-            <div className="mt-4 flex gap-3">
-              <div className="h-8 w-24 animate-pulse rounded-full bg-black/6" />
-              <div className="h-8 w-28 animate-pulse rounded-full bg-black/6" />
-              <div className="h-8 w-20 animate-pulse rounded-full bg-black/6" />
+            <div className="mt-3.5 flex gap-3">
+              <div className="h-7 w-[5.5rem] animate-pulse rounded-full bg-black/6" />
+              <div className="h-7 w-[6.5rem] animate-pulse rounded-full bg-black/6" />
+              <div className="h-7 w-[4.5rem] animate-pulse rounded-full bg-black/6" />
             </div>
           </div>
         ))}
@@ -116,24 +116,28 @@ function TaskInboxRow({
       onClick={() => {
         onOpen(task);
       }}
-      className="flex w-full flex-col gap-4 px-8 py-5 text-left transition-colors hover:bg-surface-muted/50"
+      className="flex w-full flex-col gap-3.5 px-[var(--section-padding-x)] py-[1.125rem] text-left transition-colors hover:bg-surface-muted/45"
     >
       <div className="flex flex-wrap items-center gap-3">
-        <span className="inline-flex min-h-8 items-center rounded-full bg-surface-muted px-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+        <span className="inline-flex min-h-7 items-center rounded-full bg-surface-muted px-3 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-muted">
           {workspaceName}
         </span>
         <StatusBadge label={readStatusLabel(task.status)} tone={getStatusTone(task.status)} />
-        <span className="text-sm text-muted">{task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}</span>
+        <span className="text-[0.88rem] text-muted">
+          {task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}
+        </span>
       </div>
 
       <div>
-        <h3 className="text-[1.2rem] font-semibold tracking-tight text-foreground">{task.title}</h3>
+        <h3 className="text-[1.12rem] font-semibold tracking-tight text-foreground">{task.title}</h3>
         {task.description ? (
-          <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#7a8aa2]">{task.description}</p>
+          <p className="mt-1.5 line-clamp-2 text-[0.92rem] leading-6 text-[#7a8aa2]">
+            {task.description}
+          </p>
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-[#8d9ab0]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.88rem] text-[#8d9ab0]">
         <TaskMeta label={task.assigneeUser?.displayName ?? 'Unassigned'} />
         <TaskMeta label={`By ${task.createdByUser.displayName}`} />
         <TaskMeta label={`Updated ${formatDateTime(task.updatedAt)}`} />

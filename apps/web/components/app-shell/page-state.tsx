@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AppButton } from '@/components/ui/button';
 
 type StatusTone = 'default' | 'warning' | 'danger';
 
@@ -25,18 +26,17 @@ export function PageStatusCard({
 }: PageStatusCardProps) {
   return (
     <section
-      className={`shell-panel rounded-[1.35rem] border p-7 shadow-[var(--shadow)] ${toneClasses[tone]}`}
+      className={`shell-panel rounded-[var(--radius-panel)] border px-[var(--section-padding-x)] py-[var(--section-padding-y)] shadow-[var(--shadow)] ${toneClasses[tone]}`}
     >
-      <h2 className="text-xl font-semibold tracking-tight text-foreground">{title}</h2>
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{description}</p>
+      <h2 className="text-[1.42rem] font-semibold tracking-tight text-foreground">{title}</h2>
+      <p className="mt-2.5 max-w-2xl text-[0.94rem] leading-6 text-muted">{description}</p>
       {actionLabel && onAction ? (
-        <button
-          type="button"
+        <AppButton
           onClick={onAction}
-          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong"
+          className="mt-4"
         >
           {actionLabel}
-        </button>
+        </AppButton>
       ) : null}
     </section>
   );
@@ -51,7 +51,7 @@ export function ContentPanel({
 }) {
   return (
     <section
-      className={`rounded-[var(--radius-panel)] border border-line bg-surface-strong shadow-[var(--panel-shadow)] ${className ?? ''}`}
+      className={`overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface-strong shadow-[var(--panel-shadow)] ${className ?? ''}`}
     >
       {children}
     </section>
@@ -68,11 +68,11 @@ export function ContentPanelHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-5 border-b border-line px-[var(--section-padding-x)] py-[var(--section-padding-y)]">
+    <div className="flex items-start justify-between gap-4 border-b border-line px-[var(--section-padding-x)] py-[var(--section-padding-y)]">
       <div className="min-w-0">
-        <h2 className="text-[1.82rem] font-semibold tracking-tight text-foreground">{title}</h2>
+        <h2 className="text-[1.7rem] font-semibold tracking-tight text-foreground">{title}</h2>
         {description ? (
-          <p className="mt-2 text-[1rem] leading-6 text-muted">{description}</p>
+          <p className="mt-1.5 text-[0.95rem] leading-6 text-muted">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -97,7 +97,9 @@ export function StatusBadge({
           : 'bg-surface-muted text-muted';
 
   return (
-    <span className={`inline-flex min-h-7 items-center rounded-full px-2.5 text-[0.72rem] font-semibold ${toneClass}`}>
+    <span
+      className={`inline-flex min-h-[1.625rem] items-center rounded-full px-2.5 text-[0.7rem] font-semibold tracking-[0.02em] ${toneClass}`}
+    >
       {label}
     </span>
   );
@@ -120,27 +122,27 @@ export function PageSurface({
 }: PageSurfaceProps) {
   if (variant === 'skeleton') {
     return (
-      <section className="shell-panel rounded-[1.75rem] border border-line bg-surface-strong p-8 shadow-[var(--shadow)]">
+      <section className="shell-panel rounded-[var(--radius-panel)] border border-line bg-surface-strong px-[var(--section-padding-x)] py-[calc(var(--section-padding-y)+0.15rem)] shadow-[var(--shadow)]">
         <div className="h-3 w-28 animate-pulse rounded-full bg-black/10" />
-        <div className="mt-5 h-10 w-80 max-w-full animate-pulse rounded-2xl bg-black/10" />
-        <div className="mt-4 h-4 w-full animate-pulse rounded-full bg-black/5" />
-        <div className="mt-3 h-4 w-3/4 animate-pulse rounded-full bg-black/5" />
+        <div className="mt-4 h-9 w-80 max-w-full animate-pulse rounded-[0.95rem] bg-black/10" />
+        <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-black/5" />
+        <div className="mt-2.5 h-4 w-3/4 animate-pulse rounded-full bg-black/5" />
       </section>
     );
   }
 
   return (
-    <section className="shell-panel rounded-[1.35rem] border border-line bg-surface-strong p-7 shadow-[var(--shadow)]">
+    <section className="shell-panel rounded-[var(--radius-panel)] border border-line bg-surface-strong px-[var(--section-padding-x)] py-[calc(var(--section-padding-y)+0.15rem)] shadow-[var(--shadow)]">
       {eyebrow ? (
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">{eyebrow}</p>
       ) : null}
       {title ? (
-        <h2 className="mt-3 text-[1.85rem] font-semibold tracking-tight text-foreground">{title}</h2>
+        <h2 className="mt-2.5 text-[1.72rem] font-semibold tracking-tight text-foreground">{title}</h2>
       ) : null}
       {description ? (
-        <p className="mt-2.5 max-w-2xl text-sm leading-6 text-muted">{description}</p>
+        <p className="mt-2 max-w-2xl text-[0.94rem] leading-6 text-muted">{description}</p>
       ) : null}
-      {children ? <div className="mt-4">{children}</div> : null}
+      {children ? <div className="mt-3.5">{children}</div> : null}
     </section>
   );
 }
