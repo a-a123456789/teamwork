@@ -18,11 +18,11 @@ export function CalendarTaskChip({ task, variant, onOpen }: CalendarTaskChipProp
         onClick={() => {
           onOpen(task.id);
         }}
-        className="flex w-full items-center justify-between gap-4 rounded-[1.1rem] border border-line bg-surface-strong px-4 py-4 text-left shadow-[0_10px_28px_rgba(15,23,20,0.06)] transition-colors hover:border-line-strong"
+        className="flex w-full items-center justify-between gap-3.5 rounded-[0.95rem] border border-line bg-surface-strong px-4 py-3.5 text-left shadow-[0_8px_20px_rgba(15,23,20,0.05)] transition-colors hover:border-line-strong"
       >
         <div className="min-w-0">
-          <p className="truncate text-base font-semibold tracking-tight text-foreground">{task.title}</p>
-          <p className="mt-2 truncate text-sm text-muted">
+          <p className="truncate text-[0.96rem] font-semibold tracking-tight text-foreground">{task.title}</p>
+          <p className="mt-1.5 truncate text-[0.84rem] text-muted">
             {task.assigneeUser?.displayName ?? task.createdByUser.displayName}
           </p>
         </div>
@@ -37,7 +37,7 @@ export function CalendarTaskChip({ task, variant, onOpen }: CalendarTaskChipProp
       onClick={() => {
         onOpen(task.id);
       }}
-      className={`w-full rounded-[0.8rem] border border-line/80 bg-surface-muted px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:border-line-strong ${
+      className={`w-full rounded-[0.72rem] border border-line/75 bg-surface-muted px-2.5 py-1.5 text-left text-[0.82rem] font-medium text-foreground transition-colors hover:border-line-strong ${
         variant === 'month' ? 'truncate' : ''
       }`}
       title={task.title}

@@ -20,12 +20,12 @@ export function CalendarMonthView({
   const weekdayHeaders = getWeekdayHeaders();
 
   return (
-    <div className="overflow-hidden rounded-b-[1.75rem]">
-      <div className="grid grid-cols-7 border-b border-line bg-surface-muted/80">
+    <div className="overflow-hidden rounded-b-[1.4rem]">
+      <div className="grid grid-cols-7 border-b border-line bg-surface-muted/72">
         {weekdayHeaders.map((header) => (
           <div
             key={header}
-            className="border-r border-line px-4 py-3 text-center text-sm font-semibold text-muted last:border-r-0"
+            className="border-r border-line px-3 py-2.5 text-center text-[0.82rem] font-semibold text-muted last:border-r-0"
           >
             {header}
           </div>
@@ -40,13 +40,13 @@ export function CalendarMonthView({
           return (
             <div
               key={cell.date}
-              className={`min-h-[145px] border-r border-b border-line px-3 py-3 align-top last:border-r-0 ${
+              className={`min-h-[136px] border-r border-b border-line px-2.5 py-2.5 align-top last:border-r-0 ${
                 cell.inCurrentMonth ? 'bg-surface-strong' : 'bg-surface-muted/80'
               }`}
             >
               <div className="flex items-center justify-between">
                 <span
-                  className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-semibold ${
+                  className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[0.84rem] font-semibold ${
                     cell.isSelected
                       ? 'bg-[#65d8c8] text-white'
                       : cell.isToday
@@ -60,7 +60,7 @@ export function CalendarMonthView({
                 </span>
               </div>
 
-              <div className="mt-3 flex flex-col gap-2">
+              <div className="mt-2.5 flex flex-col gap-1.5">
                 {visibleTasks.map((task) => (
                   <CalendarTaskChip key={task.id} task={task} variant="month" onOpen={onTaskOpen} />
                 ))}
@@ -71,7 +71,7 @@ export function CalendarMonthView({
                     onClick={() => {
                       onShowMore(cell.date);
                     }}
-                    className="text-left text-xs font-semibold text-accent transition-colors hover:text-accent-strong"
+                    className="text-left text-[0.75rem] font-semibold text-accent transition-colors hover:text-accent-strong"
                   >
                     +{remainingCount} more
                   </button>

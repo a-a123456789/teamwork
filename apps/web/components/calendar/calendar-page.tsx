@@ -74,9 +74,9 @@ export function CalendarPage({
         onToday={onToday}
       />
 
-      <div className="border-b border-line px-6 py-8 text-center">
-        <p className="text-[2.05rem] font-semibold tracking-tight text-foreground">{heading}</p>
-        <p className="mt-2 text-sm text-muted">
+      <div className="border-b border-line px-6 py-7 text-center">
+        <p className="text-[1.85rem] font-semibold tracking-tight text-foreground">{heading}</p>
+        <p className="mt-1.5 text-[0.9rem] text-muted">
           {workspace.name} due dates shown in the {currentView} calendar view.
         </p>
       </div>
@@ -104,7 +104,7 @@ export function CalendarPage({
 
 function CalendarEmptyState({ message }: { message: string }) {
   return (
-    <div className="border-b border-line bg-surface-muted/65 px-6 py-4 text-sm leading-6 text-muted">
+    <div className="border-b border-line bg-surface-muted/55 px-6 py-3.5 text-[0.9rem] leading-6 text-muted">
       {message}
     </div>
   );
