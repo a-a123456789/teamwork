@@ -104,7 +104,7 @@ export default function WorkspaceBoardPage() {
   }, [openCreateTaskModal, setActionOverride, workspaceQuery.status]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1460px] flex-col">
+    <div className="mx-auto flex w-full max-w-[1520px] flex-col">
       {workspaceQuery.status === 'loading' || tasksQuery.status === 'loading' ? (
         <BoardLoadingState />
       ) : null}
@@ -126,7 +126,7 @@ export default function WorkspaceBoardPage() {
       ) : null}
 
       {workspaceQuery.status === 'success' && tasksQuery.status === 'success' ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {membersQuery.status === 'error' ? (
             <PageSurface
               eyebrow="Limited filters"

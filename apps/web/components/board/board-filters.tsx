@@ -25,13 +25,13 @@ export function BoardFiltersPanel({
   membersUnavailable,
 }: BoardFiltersPanelProps) {
   return (
-    <ContentPanel className="flex w-[258px] shrink-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b border-line px-5 py-4">
-        <h3 className="text-[1.45rem] font-semibold tracking-tight text-foreground">Filters</h3>
+    <ContentPanel className="flex w-[226px] shrink-0 flex-col overflow-hidden">
+      <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
+        <h3 className="text-[1.3rem] font-semibold tracking-tight text-foreground">Filters</h3>
         <FilterFunnelIcon />
       </div>
 
-      <div className="flex flex-col gap-8 px-5 py-5">
+      <div className="flex flex-col gap-6 px-4 py-4">
         <FilterSection
           title="Status"
           options={statusOptions.map((option) => ({
@@ -84,24 +84,24 @@ function FilterSection({
   return (
     <section>
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">{title}</h4>
+        <h4 className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted">{title}</h4>
         <ChevronIcon />
       </div>
-      <div className="mt-4 flex flex-col gap-1">
+      <div className="mt-3 flex flex-col gap-0.5">
         {options.map((option) => (
           <button
             key={option.key}
             type="button"
             onClick={option.onSelect}
-            className={`flex items-center justify-between rounded-xl px-3 py-3 text-left text-[0.98rem] font-medium transition-colors ${
+            className={`flex items-center justify-between rounded-[0.9rem] px-2.5 py-2.5 text-left text-[0.92rem] font-medium transition-colors ${
               option.selected
-                ? 'bg-accent-soft text-foreground'
+                ? 'bg-accent-soft/90 text-foreground'
                 : 'text-foreground hover:bg-surface-muted'
             }`}
           >
             <span>{option.label}</span>
             <span
-              className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${
+              className={`inline-flex h-4.5 w-4.5 items-center justify-center rounded-full ${
                 option.selected ? 'text-accent' : 'text-transparent'
               }`}
             >
@@ -110,7 +110,7 @@ function FilterSection({
           </button>
         ))}
       </div>
-      {note ? <p className="mt-3 text-xs leading-5 text-muted">{note}</p> : null}
+      {note ? <p className="mt-2.5 text-[0.74rem] leading-5 text-muted">{note}</p> : null}
     </section>
   );
 }
@@ -133,7 +133,7 @@ function toStatusLabel(status: BoardStatusFilter): string {
 
 function FilterFunnelIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M4.5 6h15l-5.8 6.5V18l-3.4 1.8v-7.3z" />
     </svg>
   );
@@ -141,7 +141,7 @@ function FilterFunnelIcon() {
 
 function ChevronIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="m8 10 4 4 4-4" />
     </svg>
   );

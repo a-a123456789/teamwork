@@ -25,7 +25,7 @@ export function PageStatusCard({
 }: PageStatusCardProps) {
   return (
     <section
-      className={`shell-panel rounded-[1.75rem] border p-8 shadow-[var(--shadow)] ${toneClasses[tone]}`}
+      className={`shell-panel rounded-[1.35rem] border p-7 shadow-[var(--shadow)] ${toneClasses[tone]}`}
     >
       <h2 className="text-xl font-semibold tracking-tight text-foreground">{title}</h2>
       <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{description}</p>
@@ -68,11 +68,11 @@ export function ContentPanelHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-6 border-b border-line px-[var(--section-padding-x)] py-[var(--section-padding-y)]">
+    <div className="flex items-start justify-between gap-5 border-b border-line px-[var(--section-padding-x)] py-[var(--section-padding-y)]">
       <div className="min-w-0">
-        <h2 className="text-[2rem] font-semibold tracking-tight text-foreground">{title}</h2>
+        <h2 className="text-[1.82rem] font-semibold tracking-tight text-foreground">{title}</h2>
         {description ? (
-          <p className="mt-2 text-[1.05rem] leading-7 text-muted">{description}</p>
+          <p className="mt-2 text-[1rem] leading-6 text-muted">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -97,7 +97,7 @@ export function StatusBadge({
           : 'bg-surface-muted text-muted';
 
   return (
-    <span className={`inline-flex min-h-8 items-center rounded-full px-3 text-xs font-semibold ${toneClass}`}>
+    <span className={`inline-flex min-h-7 items-center rounded-full px-2.5 text-[0.72rem] font-semibold ${toneClass}`}>
       {label}
     </span>
   );
@@ -130,17 +130,17 @@ export function PageSurface({
   }
 
   return (
-    <section className="shell-panel rounded-[1.75rem] border border-line bg-surface-strong p-8 shadow-[var(--shadow)]">
+    <section className="shell-panel rounded-[1.35rem] border border-line bg-surface-strong p-7 shadow-[var(--shadow)]">
       {eyebrow ? (
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">{eyebrow}</p>
       ) : null}
       {title ? (
-        <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
+        <h2 className="mt-3 text-[1.85rem] font-semibold tracking-tight text-foreground">{title}</h2>
       ) : null}
       {description ? (
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{description}</p>
+        <p className="mt-2.5 max-w-2xl text-sm leading-6 text-muted">{description}</p>
       ) : null}
-      {children ? <div className="mt-5">{children}</div> : null}
+      {children ? <div className="mt-4">{children}</div> : null}
     </section>
   );
 }
