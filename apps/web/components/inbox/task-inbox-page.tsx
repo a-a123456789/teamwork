@@ -116,7 +116,7 @@ function TaskInboxRow({
       onClick={() => {
         onOpen(task);
       }}
-      className="flex w-full flex-col gap-3 px-[var(--section-padding-x)] py-4 text-left transition-colors hover:bg-surface-muted/45"
+      className="flex w-full flex-col gap-3.5 px-[var(--section-padding-x)] py-[1.125rem] text-left transition-colors hover:bg-surface-muted/45"
     >
       <div className="flex flex-wrap items-center gap-3">
         <span className="inline-flex min-h-7 items-center rounded-full bg-surface-muted px-3 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -131,13 +131,13 @@ function TaskInboxRow({
       <div>
         <h3 className="text-[1.12rem] font-semibold tracking-tight text-foreground">{task.title}</h3>
         {task.description ? (
-          <p className="mt-1 line-clamp-2 text-[0.92rem] leading-6 text-muted">
+          <p className="mt-1.5 line-clamp-2 text-[0.92rem] leading-6 text-muted">
             {task.description}
           </p>
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.88rem] text-muted/95">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.88rem] text-muted">
         <TaskMeta label={task.assigneeUser?.displayName ?? 'Unassigned'} />
         <TaskMeta label={`By ${task.createdByUser.displayName}`} />
         <TaskMeta label={`Updated ${formatDateTime(task.updatedAt)}`} />

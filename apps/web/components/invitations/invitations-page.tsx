@@ -86,12 +86,12 @@ export function InvitationsPage({
 
   return (
     <>
-      <section className="flex items-start justify-between gap-4">
+      <section className="flex items-start justify-between gap-5">
         <div>
           <h2 className="text-[1.82rem] font-semibold tracking-tight text-foreground">
             Invitations
           </h2>
-          <p className="mt-1 text-[0.96rem] leading-6 text-muted">
+          <p className="mt-1.5 text-[0.98rem] leading-6 text-muted">
             Invite new members to your workspace
           </p>
         </div>
@@ -117,7 +117,7 @@ export function InvitationsPage({
       ) : null}
 
       {successResult ? (
-        <section className="rounded-[calc(var(--radius-control)+0.3rem)] border border-line bg-[var(--color-info-soft)] px-6 py-4.5 shadow-[var(--panel-shadow)]">
+        <section className="rounded-[calc(var(--radius-control)+0.3rem)] border border-line bg-[var(--color-info-soft)] px-6 py-5">
           <p className="text-[0.88rem] font-semibold text-foreground">
             Share this invitation link:
           </p>
@@ -186,7 +186,7 @@ export function InvitationsPageSkeleton() {
       </section>
 
       <section className="rounded-[1.5rem] border border-line bg-surface-strong shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
-        <div className="px-7 py-4">
+        <div className="px-7 py-4.5">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3.5">
               <div className="h-11 w-11 animate-pulse rounded-full bg-black/10" />
@@ -220,7 +220,7 @@ function InvitationRow({
   onRevoke: (invitation: WorkspaceInvitationSummary) => Promise<void>;
 }) {
   return (
-    <div className="px-7 py-4">
+    <div className="px-7 py-4.5">
       <div className="flex items-center justify-between gap-6">
         <div className="flex min-w-0 items-center gap-3.5">
           <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface-muted text-muted">

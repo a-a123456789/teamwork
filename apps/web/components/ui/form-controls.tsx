@@ -18,7 +18,7 @@ export function Field({
   children,
 }: FieldProps) {
   return (
-    <label className="flex flex-col gap-1.5">
+    <label className="flex flex-col gap-2">
       <span className="text-[0.96rem] font-semibold text-foreground">
         {label}
         {required ? <span className="ml-1 text-danger">*</span> : null}
@@ -27,7 +27,7 @@ export function Field({
       {error ? (
         <span className="text-[0.84rem] leading-5 text-danger">{error}</span>
       ) : hint ? (
-        <span className="text-[0.84rem] leading-5 text-muted/95">{hint}</span>
+        <span className="text-[0.84rem] leading-5 text-muted">{hint}</span>
       ) : null}
     </label>
   );
@@ -42,7 +42,7 @@ export function FormMessage({
 }) {
   return (
     <div
-      className={`rounded-[calc(var(--radius-control)+0.05rem)] border px-3.5 py-2.5 text-[0.88rem] leading-6 shadow-[0_1px_2px_rgba(15,23,42,0.02)] ${
+      className={`rounded-[calc(var(--radius-control)+0.05rem)] border px-3.5 py-2.5 text-[0.88rem] leading-6 ${
         tone === 'info'
           ? 'border-line bg-[var(--color-info-soft)] text-foreground'
           : 'border-danger/20 bg-danger-soft text-danger'
@@ -54,7 +54,7 @@ export function FormMessage({
 }
 
 export function getTextControlClassName(hasError: boolean, tone: 'muted' | 'strong' = 'muted'): string {
-  return `min-h-11 rounded-[0.85rem] border px-3.5 py-2.5 text-[0.95rem] text-foreground outline-none transition-colors placeholder:text-muted/70 shadow-[0_1px_2px_rgba(15,23,42,0.02)] ${
+  return `min-h-11 rounded-[0.85rem] border px-3.5 py-2.5 text-[0.95rem] text-foreground outline-none transition-colors placeholder:text-muted/70 ${
     tone === 'strong' ? 'bg-surface-strong' : 'bg-surface-strong'
   } ${hasError ? 'border-danger/55 focus:border-danger' : 'border-line focus:border-accent'}`;
 }

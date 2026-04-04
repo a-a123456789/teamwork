@@ -26,7 +26,7 @@ export function AppShellHeader({ routeContext }: AppShellHeaderProps) {
           {routeContext.definition.title}
         </h1>
         {routeContext.definition.subtitle ? (
-          <p className="mt-1 max-w-2xl text-[0.94rem] leading-6 text-muted">
+          <p className="mt-1.5 max-w-2xl text-[0.94rem] leading-6 text-muted">
             {routeContext.definition.subtitle}
           </p>
         ) : null}

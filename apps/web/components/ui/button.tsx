@@ -36,11 +36,11 @@ export function getButtonClassName(
 
   const variantClass =
     variant === 'secondary'
-      ? 'border border-line bg-surface-strong text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.03)] hover:border-line-strong hover:bg-surface-muted'
+      ? 'border border-line bg-surface-strong text-foreground hover:border-line-strong hover:bg-surface-muted'
       : variant === 'ghost'
         ? 'border border-transparent bg-transparent text-muted hover:border-line hover:bg-surface-muted hover:text-foreground'
         : variant === 'success'
-          ? 'bg-[var(--color-success-soft)] text-foreground shadow-[0_6px_14px_rgba(134,239,172,0.12)] hover:bg-[rgba(134,239,172,0.24)]'
+          ? 'bg-[var(--color-success)] text-[#0f172a] shadow-[0_8px_18px_rgba(134,239,172,0.22)] hover:bg-[var(--color-success-strong)]'
           : 'bg-accent text-white shadow-[0_10px_22px_rgba(51,65,85,0.16)] hover:bg-accent-strong';
 
   return `${base} ${sizeClass} ${variantClass}`;
