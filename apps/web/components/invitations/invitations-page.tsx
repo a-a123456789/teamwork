@@ -8,6 +8,12 @@ import type {
 } from '@teamwork/types';
 import { ApiError, revokeWorkspaceInvitation } from '@/lib/api/client';
 import { InviteMemberModal } from '@/components/invitations/invite-member-modal';
+import {
+  ContentPanel,
+  StatusBadge,
+} from '@/components/app-shell/page-state';
+import { AppButton, getIconButtonClassName } from '@/components/ui/button';
+import { FormMessage } from '@/components/ui/form-controls';
 
 interface InvitationsPageProps {
   workspaceId: string;
@@ -91,24 +97,28 @@ export function InvitationsPage({
         </div>
 
         {isOwner ? (
-          <button
+          <AppButton
             type="button"
             onClick={() => {
               setIsInviteModalOpen(true);
             }}
-            className="inline-flex min-h-12 items-center justify-center rounded-[0.95rem] bg-[#334158] px-6 text-base font-semibold text-white transition-colors hover:bg-[#253147]"
+            className="px-6 text-base"
           >
             Invite Member
-          </button>
+          </AppButton>
         ) : null}
       </section>
 
       {successResult ? (
-        <section className="rounded-[1.25rem] border border-line bg-[#edf9ff] px-6 py-5">
+        <FormMessage
+          tone="info"
+          message={`Invitation created for ${successResult.invitation.email}`}
+        />
+      ) : null}
+
+      {successResult ? (
+        <section className="rounded-[calc(var(--radius-control)+0.3rem)] border border-line bg-[var(--color-info-soft)] px-6 py-5">
           <p className="text-sm font-semibold text-foreground">
-            Invitation created for {successResult.invitation.email}
-          </p>
-          <p className="mt-2 text-sm leading-6 text-[#6d7e95]">
             Share this invitation link:
           </p>
           <a
@@ -120,7 +130,7 @@ export function InvitationsPage({
         </section>
       ) : null}
 
-      <section className="rounded-[1.5rem] border border-line bg-surface-strong shadow-[0_18px_38px_rgba(15,23,20,0.06)]">
+      <ContentPanel>
         {sortedItems.length === 0 ? (
           <div className="px-8 py-8">
             <p className="text-lg font-semibold text-foreground">No pending invitations</p>
@@ -146,7 +156,7 @@ export function InvitationsPage({
             })}
           </div>
         )}
-      </section>
+      </ContentPanel>
 
       <InviteMemberModal
         open={isInviteModalOpen}
@@ -227,9 +237,7 @@ function InvitationRow({
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
-          <span className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#ecfffd] px-4 text-sm font-semibold text-[#5dd8cf]">
-            Pending
-          </span>
+          <StatusBadge label="Pending" tone="success" />
           {isOwner ? (
             <button
               type="button"
@@ -238,7 +246,7 @@ function InvitationRow({
               }}
               disabled={isRevoking}
               aria-label={`Cancel invitation for ${invitation.email}`}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#7f8ea5] transition-colors hover:bg-surface-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              className={getIconButtonClassName()}
             >
               <CloseIcon />
             </button>

@@ -15,6 +15,7 @@ import { CalendarDayView } from '@/components/calendar/calendar-day-view';
 import { CalendarMonthView } from '@/components/calendar/calendar-month-view';
 import { CalendarToolbar } from '@/components/calendar/calendar-toolbar';
 import { CalendarWeekView } from '@/components/calendar/calendar-week-view';
+import { ContentPanel } from '@/components/app-shell/page-state';
 
 interface CalendarPageProps {
   workspace: WorkspaceResponse['workspace'];
@@ -62,7 +63,7 @@ export function CalendarPage({
         : monthCells.some((cell) => cell.tasks.length > 0);
 
   return (
-    <section className="overflow-hidden rounded-[1.75rem] border border-line bg-surface-strong shadow-[var(--shadow)]">
+    <ContentPanel className="overflow-hidden">
       <CalendarToolbar
         currentFilter={currentFilter}
         currentView={currentView}
@@ -97,7 +98,7 @@ export function CalendarPage({
       ) : null}
 
       {currentView === 'day' ? <CalendarDayView tasks={dayTasks} onTaskOpen={onTaskOpen} /> : null}
-    </section>
+    </ContentPanel>
   );
 }
 

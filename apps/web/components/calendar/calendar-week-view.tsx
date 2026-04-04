@@ -12,7 +12,7 @@ export function CalendarWeekView({ days, onTaskOpen }: CalendarWeekViewProps) {
   return (
     <div className="grid grid-cols-7 gap-4 px-6 pb-6">
       {days.map((day) => (
-        <div key={day.date} className="flex min-h-[340px] flex-col rounded-[1.35rem] border border-line bg-surface-strong p-4">
+        <div key={day.date} className="flex min-h-[340px] flex-col rounded-[calc(var(--radius-panel)-0.15rem)] border border-line bg-surface-strong p-4">
           <div className="flex flex-col items-center gap-3 border-b border-line pb-4">
             <span className="text-sm font-semibold text-muted">{day.weekdayShort}</span>
             <span
@@ -34,7 +34,7 @@ export function CalendarWeekView({ days, onTaskOpen }: CalendarWeekViewProps) {
                 <CalendarTaskChip key={task.id} task={task} variant="week" onOpen={onTaskOpen} />
               ))
             ) : (
-              <div className="rounded-[1rem] border border-dashed border-line px-3 py-4 text-center text-sm text-muted">
+              <div className="rounded-[var(--radius-control)] border border-dashed border-line px-3 py-4 text-center text-sm text-muted">
                 No tasks due
               </div>
             )}

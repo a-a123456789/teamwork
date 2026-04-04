@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import type { UserInvitationInboxItem } from '@teamwork/types';
 import { ApiError, acceptWorkspaceInvitation } from '@/lib/api/client';
+import { ContentPanel } from '@/components/app-shell/page-state';
+import { getButtonClassName } from '@/components/ui/button';
 
 interface InvitationInboxPageProps {
   invitations: UserInvitationInboxItem[];
@@ -83,7 +85,7 @@ export function InvitationInboxPage({
       </section>
 
       {successWorkspaceName ? (
-        <section className="rounded-[1.25rem] border border-line bg-[#edf9ff] px-6 py-5">
+        <section className="rounded-[calc(var(--radius-control)+0.3rem)] border border-line bg-[var(--color-info-soft)] px-6 py-5">
           <p className="text-sm font-semibold text-foreground">
             Invitation accepted for {successWorkspaceName}
           </p>
@@ -93,7 +95,7 @@ export function InvitationInboxPage({
         </section>
       ) : null}
 
-      <section className="rounded-[1.5rem] border border-line bg-surface-strong shadow-[0_18px_38px_rgba(15,23,20,0.06)]">
+      <ContentPanel>
         {items.length === 0 ? (
           <div className="px-8 py-8">
             <p className="text-lg font-semibold text-foreground">No invitations received</p>
@@ -118,7 +120,7 @@ export function InvitationInboxPage({
             })}
           </div>
         )}
-      </section>
+      </ContentPanel>
     </div>
   );
 }
@@ -183,7 +185,7 @@ function InvitationInboxRow({
             void onAccept(item);
           }}
           disabled={isAccepting}
-          className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-[0.95rem] bg-[#2fd0c5] px-6 text-base font-semibold text-[#163735] transition-colors hover:bg-[#1fc1b6] disabled:cursor-not-allowed disabled:opacity-60"
+          className={`${getButtonClassName('success')} shrink-0 px-6 text-base`}
         >
           <AcceptIcon />
           {isAccepting ? 'Accepting...' : 'Accept'}

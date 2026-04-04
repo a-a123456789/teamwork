@@ -15,6 +15,15 @@
   --danger: #8b342c;
   --muted: #5b6a62;
   --shadow: 0 24px 60px rgba(16, 24, 20, 0.08);
+  --panel-shadow: 0 18px 38px rgba(15, 23, 20, 0.06);
+  --radius-panel: 1.5rem;
+  --radius-control: 0.95rem;
+  --section-padding-x: 2rem;
+  --section-padding-y: 1.75rem;
+  --success: #2fd0c5;
+  --success-strong: #1fc1b6;
+  --success-soft: rgba(47, 208, 197, 0.14);
+  --info-soft: #edf9ff;
 }
 
 @theme inline {
@@ -31,6 +40,10 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-muted: var(--muted);
+  --color-success: var(--success);
+  --color-success-strong: var(--success-strong);
+  --color-success-soft: var(--success-soft);
+  --color-info-soft: var(--info-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

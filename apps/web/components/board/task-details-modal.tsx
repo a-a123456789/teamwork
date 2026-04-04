@@ -27,6 +27,8 @@ import {
   type TaskDetailErrorState,
   type TaskEditorValues,
 } from '@/lib/task-details';
+import { AppButton, getIconButtonClassName } from '@/components/ui/button';
+import { Field, FormMessage, getTextControlClassName } from '@/components/ui/form-controls';
 import { Dialog } from '@/components/ui/dialog';
 
 interface TaskDetailsModalProps {
@@ -342,7 +344,7 @@ export function TaskDetailsModal({
       footer={
         isEditing ? (
           <>
-            <button
+            <AppButton
               type="button"
               onClick={() => {
                 if (!task || isSaving) {
@@ -355,18 +357,17 @@ export function TaskDetailsModal({
                 setIsEditing(false);
               }}
               disabled={isSaving}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface-muted px-5 text-sm font-semibold text-foreground transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-60"
+              variant="secondary"
             >
               Cancel
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="submit"
               form="task-details-edit-form"
               disabled={isSaving}
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
+            </AppButton>
           </>
         ) : null
       }
@@ -384,7 +385,7 @@ export function TaskDetailsModal({
           <div className="border-b border-line px-7 py-6">
             {isEditing ? (
               <div className="space-y-4">
-                <FieldBlock label="Title" error={editorErrors.title} hint={undefined}>
+                <Field label="Title" error={editorErrors.title}>
                   <input
                     value={editorValues.title}
                     onChange={(event) => {
@@ -395,11 +396,11 @@ export function TaskDetailsModal({
                       clearEditorError('title', setEditorErrors);
                     }}
                     maxLength={200}
-                    className={getFieldClassName(Boolean(editorErrors.title))}
+                    className={getTextControlClassName(Boolean(editorErrors.title), 'strong')}
                   />
-                </FieldBlock>
+                </Field>
 
-                <FieldBlock label="Description" error={editorErrors.description} hint={undefined}>
+                <Field label="Description" error={editorErrors.description}>
                   <textarea
                     value={editorValues.description}
                     onChange={(event) => {
@@ -411,11 +412,11 @@ export function TaskDetailsModal({
                     }}
                     rows={5}
                     maxLength={5000}
-                    className={`${getFieldClassName(Boolean(editorErrors.description))} resize-none`}
+                    className={`${getTextControlClassName(Boolean(editorErrors.description), 'strong')} resize-none`}
                   />
-                </FieldBlock>
+                </Field>
 
-                <FieldBlock label="Due Date" error={editorErrors.dueDate} hint={undefined}>
+                <Field label="Due Date" error={editorErrors.dueDate}>
                   <input
                     type="date"
                     value={editorValues.dueDate}
@@ -426,9 +427,9 @@ export function TaskDetailsModal({
                       }));
                       clearEditorError('dueDate', setEditorErrors);
                     }}
-                    className={getFieldClassName(Boolean(editorErrors.dueDate))}
+                    className={getTextControlClassName(Boolean(editorErrors.dueDate), 'strong')}
                   />
-                </FieldBlock>
+                </Field>
               </div>
             ) : (
               <div className="space-y-3">
@@ -449,9 +450,8 @@ export function TaskDetailsModal({
 
           <div className="space-y-6 px-7 py-6">
             <div className="grid grid-cols-2 gap-4">
-              <FieldBlock
+              <Field
                 label="Status"
-                error={undefined}
                 hint={isUpdatingStatus ? 'Saving status...' : undefined}
               >
                 <select
@@ -464,7 +464,7 @@ export function TaskDetailsModal({
                     }
                   }}
                   disabled={isUpdatingStatus || isDeleting}
-                  className={getFieldClassName(false)}
+                  className={getTextControlClassName(false, 'strong')}
                 >
                   {STATUS_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -472,11 +472,10 @@ export function TaskDetailsModal({
                     </option>
                   ))}
                 </select>
-              </FieldBlock>
+              </Field>
 
-              <FieldBlock
+              <Field
                 label="Assignee"
-                error={undefined}
                 hint={
                   isUpdatingAssignee
                     ? 'Saving assignee...'
@@ -491,7 +490,7 @@ export function TaskDetailsModal({
                     void handleAssigneeChange(event.target.value);
                   }}
                   disabled={isAssigneeDisabled || isDeleting}
-                  className={getFieldClassName(false)}
+                  className={getTextControlClassName(false, 'strong')}
                 >
                   <option value="">Unassigned</option>
                   {assigneeOptions.map((option) => (
@@ -500,7 +499,7 @@ export function TaskDetailsModal({
                     </option>
                   ))}
                 </select>
-              </FieldBlock>
+              </Field>
             </div>
 
             <div className="border-t border-line pt-5 text-[1rem] leading-8 text-muted">
@@ -516,34 +515,34 @@ export function TaskDetailsModal({
                   This permanently removes the task from the board.
                 </p>
                 <div className="mt-4 flex items-center gap-3">
-                  <button
+                  <AppButton
                     type="button"
                     onClick={() => {
                       setIsDeleteConfirming(false);
                     }}
                     disabled={isDeleting}
-                    className="inline-flex min-h-10 items-center justify-center rounded-full border border-line bg-white px-4 text-sm font-semibold text-foreground transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-60"
+                    variant="secondary"
+                    size="compact"
                   >
                     Keep Task
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
                     onClick={() => {
                       void handleDelete();
                     }}
                     disabled={isDeleting}
-                    className="inline-flex min-h-10 items-center justify-center rounded-full bg-danger px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    size="compact"
+                    className="bg-danger text-white hover:bg-[#7b2a24]"
                   >
                     {isDeleting ? 'Deleting...' : 'Delete Task'}
-                  </button>
+                  </AppButton>
                 </div>
               </div>
             ) : null}
 
             {editorErrors.form || actionErrorMessage ? (
-              <div className="rounded-[1.1rem] border border-danger/20 bg-danger-soft px-4 py-3 text-sm leading-6 text-danger">
-                {editorErrors.form ?? actionErrorMessage}
-              </div>
+              <FormMessage message={editorErrors.form ?? actionErrorMessage ?? 'Action failed.'} />
             ) : null}
           </div>
         </form>
@@ -580,30 +579,6 @@ function TaskDetailsErrorState({ description }: { description: string }) {
   );
 }
 
-function FieldBlock({
-  label,
-  children,
-  hint,
-  error,
-}: {
-  label: string;
-  children: ReactNode;
-  hint: string | undefined;
-  error: string | undefined;
-}) {
-  return (
-    <label className="flex flex-col gap-2">
-      <span className="text-[0.95rem] font-semibold text-[#7d8da8]">{label}</span>
-      {children}
-      {error ? (
-        <span className="text-sm text-danger">{error}</span>
-      ) : hint ? (
-        <span className="text-sm text-muted">{hint}</span>
-      ) : null}
-    </label>
-  );
-}
-
 function IconActionButton({
   label,
   onClick,
@@ -621,7 +596,7 @@ function IconActionButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#7d8da8] transition-colors hover:bg-surface-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      className={getIconButtonClassName()}
     >
       {children}
     </button>
@@ -656,14 +631,6 @@ function CloseIcon() {
       <path d="M17 7 7 17" />
     </svg>
   );
-}
-
-function getFieldClassName(hasError: boolean): string {
-  return `min-h-12 rounded-[1rem] border bg-white px-4 py-3 text-sm text-foreground outline-none transition-colors ${
-    hasError
-      ? 'border-danger/40 focus:border-danger'
-      : 'border-line focus:border-accent'
-  }`;
 }
 
 function clearEditorError(

@@ -6,6 +6,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react';
+import { getIconButtonClassName } from '@/components/ui/button';
 
 interface DialogProps {
   open: boolean;
@@ -77,7 +78,7 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className={`w-full max-w-[680px] rounded-[1.75rem] border border-line bg-surface-strong shadow-[0_28px_80px_rgba(15,23,20,0.18)] ${panelClassName ?? ''}`}
+        className={`w-full max-w-[680px] rounded-[var(--radius-panel)] border border-line bg-surface-strong shadow-[0_28px_80px_rgba(15,23,20,0.18)] ${panelClassName ?? ''}`}
       >
         <div className="flex items-start justify-between gap-6 border-b border-line px-7 py-6">
           <div className="min-w-0">
@@ -96,7 +97,7 @@ export function Dialog({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface-muted text-muted transition-colors hover:border-line-strong hover:text-foreground"
+                className={getIconButtonClassName()}
                 aria-label="Close dialog"
               >
                 <CloseIcon />

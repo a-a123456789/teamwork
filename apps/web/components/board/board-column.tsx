@@ -1,4 +1,5 @@
 import type { GroupedBoardColumn } from '@/lib/board';
+import { StatusBadge } from '@/components/app-shell/page-state';
 import { BoardTaskCard } from '@/components/board/task-card';
 
 interface BoardColumnProps {
@@ -14,12 +15,10 @@ export function BoardColumn({ column, hasAnyVisibleTasks, onTaskOpen }: BoardCol
         <h3 className="text-[1.55rem] font-semibold tracking-tight text-foreground">
           {column.title}
         </h3>
-        <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-surface-muted px-2 py-1 text-xs font-semibold text-muted">
-          {String(column.tasks.length)}
-        </span>
+        <StatusBadge label={String(column.tasks.length)} />
       </div>
 
-      <div className="flex min-h-[420px] flex-col gap-4 rounded-[1.4rem] border border-line/70 bg-white/40 p-3">
+      <div className="flex min-h-[420px] flex-col gap-4 rounded-[calc(var(--radius-panel)-0.1rem)] border border-line/70 bg-white/40 p-3">
         {column.tasks.map((task) => (
           <BoardTaskCard key={task.id} task={task} onOpen={onTaskOpen} />
         ))}

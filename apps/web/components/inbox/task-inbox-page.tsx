@@ -2,6 +2,11 @@
 
 import { useMemo } from 'react';
 import type { AuthenticatedWorkspace, TaskSummary } from '@teamwork/types';
+import {
+  ContentPanel,
+  ContentPanelHeader,
+  StatusBadge,
+} from '@/components/app-shell/page-state';
 
 interface TaskInboxPageProps {
   tasks: TaskSummary[];
@@ -40,13 +45,11 @@ export function TaskInboxPage({
   );
 
   return (
-    <section className="rounded-[1.5rem] border border-line bg-surface-strong shadow-[0_18px_38px_rgba(15,23,20,0.06)]">
-      <div className="border-b border-line px-8 py-7">
-        <h2 className="text-[2rem] font-semibold tracking-tight text-foreground">Task Inbox</h2>
-        <p className="mt-2 text-[1.08rem] leading-7 text-[#8a98af]">
-          Tasks across the workspaces you can access
-        </p>
-      </div>
+    <ContentPanel>
+      <ContentPanelHeader
+        title="Task Inbox"
+        description="Tasks across the workspaces you can access"
+      />
 
       {sortedTasks.length === 0 ? (
         <div className="px-8 py-8">
@@ -67,13 +70,13 @@ export function TaskInboxPage({
           ))}
         </div>
       )}
-    </section>
+    </ContentPanel>
   );
 }
 
 export function TaskInboxPageSkeleton() {
   return (
-    <section className="rounded-[1.5rem] border border-line bg-surface-strong shadow-[0_18px_38px_rgba(15,23,20,0.06)]">
+    <ContentPanel>
       <div className="border-b border-line px-8 py-7">
         <div className="h-10 w-48 animate-pulse rounded-2xl bg-black/10" />
         <div className="mt-3 h-6 w-80 animate-pulse rounded-2xl bg-black/5" />
@@ -94,7 +97,7 @@ export function TaskInboxPageSkeleton() {
           </div>
         ))}
       </div>
-    </section>
+    </ContentPanel>
   );
 }
 
@@ -119,7 +122,7 @@ function TaskInboxRow({
         <span className="inline-flex min-h-8 items-center rounded-full bg-surface-muted px-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted">
           {workspaceName}
         </span>
-        <span className={getStatusClassName(task.status)}>{readStatusLabel(task.status)}</span>
+        <StatusBadge label={readStatusLabel(task.status)} tone={getStatusTone(task.status)} />
         <span className="text-sm text-muted">{task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}</span>
       </div>
 
@@ -155,16 +158,16 @@ function readStatusLabel(status: TaskSummary['status']): string {
   return 'To Do';
 }
 
-function getStatusClassName(status: TaskSummary['status']): string {
+function getStatusTone(status: TaskSummary['status']): 'accent' | 'progress' | 'default' {
   if (status === 'done') {
-    return 'inline-flex min-h-8 items-center rounded-full bg-accent-soft px-3 text-xs font-semibold text-accent';
+    return 'accent';
   }
 
   if (status === 'in_progress') {
-    return 'inline-flex min-h-8 items-center rounded-full bg-[#e8eef8] px-3 text-xs font-semibold text-[#365489]';
+    return 'progress';
   }
 
-  return 'inline-flex min-h-8 items-center rounded-full bg-surface-muted px-3 text-xs font-semibold text-muted';
+  return 'default';
 }
 
 function formatDate(value: string): string {

@@ -6,6 +6,7 @@ import {
   type CalendarAudienceFilter,
   type CalendarView,
 } from '@/lib/calendar';
+import { getButtonClassName, getIconButtonClassName } from '@/components/ui/button';
 
 interface CalendarToolbarProps {
   currentFilter: CalendarAudienceFilter;
@@ -56,7 +57,7 @@ export function CalendarToolbar({
           onClick={() => {
             setIsFilterMenuOpen((current) => !current);
           }}
-          className="inline-flex min-h-11 items-center gap-2 rounded-[0.95rem] border border-line bg-surface-strong px-4 text-sm font-semibold text-foreground transition-colors hover:border-line-strong"
+          className={`${getButtonClassName('secondary')} gap-2 px-4`}
         >
           {currentFilterOption.label}
           <ChevronDownIcon />
@@ -119,7 +120,7 @@ export function CalendarToolbar({
           <button
             type="button"
             onClick={onPrevious}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-line hover:bg-surface-muted"
+            className={getIconButtonClassName()}
             aria-label="Previous period"
           >
             <ArrowIcon direction="left" />
@@ -127,14 +128,14 @@ export function CalendarToolbar({
           <button
             type="button"
             onClick={onToday}
-            className="inline-flex min-h-10 items-center rounded-full px-4 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted"
+            className={getButtonClassName('ghost', 'compact')}
           >
             Today
           </button>
           <button
             type="button"
             onClick={onNext}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-line hover:bg-surface-muted"
+            className={getIconButtonClassName()}
             aria-label="Next period"
           >
             <ArrowIcon direction="right" />

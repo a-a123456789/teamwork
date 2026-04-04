@@ -2,6 +2,7 @@
 
 import type { CalendarDueTask } from '@/lib/calendar';
 import { getTaskChipStatusLabel } from '@/lib/calendar';
+import { StatusBadge } from '@/components/app-shell/page-state';
 
 interface CalendarTaskChipProps {
   task: CalendarDueTask;
@@ -25,7 +26,7 @@ export function CalendarTaskChip({ task, variant, onOpen }: CalendarTaskChipProp
             {task.assigneeUser?.displayName ?? task.createdByUser.displayName}
           </p>
         </div>
-        <span className={getStatusBadgeClassName(task.status)}>{getTaskChipStatusLabel(task.status)}</span>
+        <StatusBadge label={getTaskChipStatusLabel(task.status)} tone={getStatusTone(task.status)} />
       </button>
     );
   }
@@ -46,14 +47,14 @@ export function CalendarTaskChip({ task, variant, onOpen }: CalendarTaskChipProp
   );
 }
 
-function getStatusBadgeClassName(status: CalendarDueTask['status']): string {
+function getStatusTone(status: CalendarDueTask['status']): 'accent' | 'progress' | 'default' {
   if (status === 'done') {
-    return 'inline-flex min-h-8 items-center rounded-full bg-accent-soft px-3 text-xs font-semibold text-accent';
+    return 'accent';
   }
 
   if (status === 'in_progress') {
-    return 'inline-flex min-h-8 items-center rounded-full bg-[#e8eef8] px-3 text-xs font-semibold text-[#365489]';
+    return 'progress';
   }
 
-  return 'inline-flex min-h-8 items-center rounded-full bg-surface-muted px-3 text-xs font-semibold text-muted';
+  return 'default';
 }

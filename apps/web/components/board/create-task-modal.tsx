@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode, type SyntheticEvent } from 'react';
+import { useEffect, useMemo, useState, type SyntheticEvent } from 'react';
 import type { TaskDetails, WorkspaceMemberDetail } from '@teamwork/types';
 import { ApiError, createWorkspaceTask } from '@/lib/api/client';
 import { useAuthSession } from '@/lib/auth/auth-session-provider';
@@ -8,6 +8,8 @@ import {
   validateCreateTaskInput,
   type CreateTaskFormValues,
 } from '@/lib/task-create';
+import { AppButton } from '@/components/ui/button';
+import { Field, FormMessage, getTextControlClassName } from '@/components/ui/form-controls';
 import { Dialog } from '@/components/ui/dialog';
 
 interface CreateTaskModalProps {
@@ -134,27 +136,26 @@ export function CreateTaskModal({
       onClose={handleClose}
       footer={
         <>
-          <button
+          <AppButton
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface-muted px-5 text-sm font-semibold text-foreground transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-60"
+            variant="secondary"
           >
             Cancel
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="submit"
             form="create-task-form"
             disabled={isSubmitting}
-            className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? 'Creating...' : 'Create Task'}
-          </button>
+          </AppButton>
         </>
       }
     >
       <form id="create-task-form" className="flex flex-col gap-6" onSubmit={handleFormSubmit}>
-        <FieldBlock
+        <Field
           label="Title"
           required
           error={errors.title}
@@ -166,12 +167,12 @@ export function CreateTaskModal({
               handleFieldChange('title', event.target.value);
             }}
             maxLength={200}
-            className={getFieldClassName(Boolean(errors.title))}
+            className={getTextControlClassName(Boolean(errors.title), 'strong')}
             placeholder="Task title"
           />
-        </FieldBlock>
+        </Field>
 
-        <FieldBlock
+        <Field
           label="Description"
           error={errors.description}
           hint="Optional context for the work to be done."
@@ -183,13 +184,13 @@ export function CreateTaskModal({
             }}
             maxLength={5000}
             rows={6}
-            className={`${getFieldClassName(Boolean(errors.description))} resize-none`}
+            className={`${getTextControlClassName(Boolean(errors.description), 'strong')} resize-none`}
             placeholder="Add more detail if the task needs it"
           />
-        </FieldBlock>
+        </Field>
 
-        <div className="grid grid-cols-2 gap-4 rounded-[1.35rem] border border-line bg-surface-muted/70 p-4">
-          <FieldBlock
+        <div className="grid grid-cols-2 gap-4 rounded-[calc(var(--radius-panel)-0.15rem)] border border-line bg-surface-muted/70 p-4">
+          <Field
             label="Assign To"
             error={errors.assigneeUserId}
             hint={
@@ -204,7 +205,7 @@ export function CreateTaskModal({
                 handleFieldChange('assigneeUserId', event.target.value);
               }}
               disabled={isAssigneeSelectionDisabled}
-              className={getFieldClassName(Boolean(errors.assigneeUserId))}
+              className={getTextControlClassName(Boolean(errors.assigneeUserId), 'strong')}
             >
               <option value="">Unassigned</option>
               {assigneeOptions.map((option) => (
@@ -213,9 +214,9 @@ export function CreateTaskModal({
                 </option>
               ))}
             </select>
-          </FieldBlock>
+          </Field>
 
-          <FieldBlock
+          <Field
             label="Due Date"
             error={errors.dueDate}
             hint="Optional deadline stored as a date only."
@@ -226,54 +227,13 @@ export function CreateTaskModal({
               onChange={(event) => {
                 handleFieldChange('dueDate', event.target.value);
               }}
-              className={getFieldClassName(Boolean(errors.dueDate))}
+              className={getTextControlClassName(Boolean(errors.dueDate), 'strong')}
             />
-          </FieldBlock>
+          </Field>
         </div>
 
-        {errors.form ? (
-          <div className="rounded-[1.1rem] border border-danger/20 bg-danger-soft px-4 py-3 text-sm leading-6 text-danger">
-            {errors.form}
-          </div>
-        ) : null}
+        {errors.form ? <FormMessage message={errors.form} /> : null}
       </form>
     </Dialog>
   );
-}
-
-function FieldBlock({
-  label,
-  required = false,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  hint: string | undefined;
-  error: string | undefined;
-  children: ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-2.5">
-      <span className="text-sm font-semibold text-foreground">
-        {label}
-        {required ? <span className="ml-1 text-danger">*</span> : null}
-      </span>
-      {children}
-      {error ? (
-        <span className="text-sm text-danger">{error}</span>
-      ) : hint ? (
-        <span className="text-sm text-muted">{hint}</span>
-      ) : null}
-    </label>
-  );
-}
-
-function getFieldClassName(hasError: boolean): string {
-  return `min-h-12 rounded-[1rem] border bg-white px-4 py-3 text-sm text-foreground outline-none transition-colors ${
-    hasError
-      ? 'border-danger/40 focus:border-danger'
-      : 'border-line focus:border-accent'
-  }`;
 }

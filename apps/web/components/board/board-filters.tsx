@@ -3,6 +3,7 @@ import {
   type BoardAssigneeFilter,
   type BoardStatusFilter,
 } from '@/lib/board';
+import { ContentPanel } from '@/components/app-shell/page-state';
 
 interface BoardFiltersPanelProps {
   statusFilter: BoardStatusFilter;
@@ -24,7 +25,7 @@ export function BoardFiltersPanel({
   membersUnavailable,
 }: BoardFiltersPanelProps) {
   return (
-    <aside className="flex w-[258px] shrink-0 flex-col rounded-[1.6rem] border border-line bg-surface-strong shadow-[0_14px_32px_rgba(15,23,20,0.05)]">
+    <ContentPanel className="flex w-[258px] shrink-0 flex-col overflow-hidden">
       <div className="flex items-center justify-between border-b border-line px-5 py-4">
         <h3 className="text-[1.45rem] font-semibold tracking-tight text-foreground">Filters</h3>
         <FilterFunnelIcon />
@@ -62,7 +63,7 @@ export function BoardFiltersPanel({
           }
         />
       </div>
-    </aside>
+    </ContentPanel>
   );
 }
 

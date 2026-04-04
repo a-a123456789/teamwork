@@ -42,6 +42,67 @@ export function PageStatusCard({
   );
 }
 
+export function ContentPanel({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-[var(--radius-panel)] border border-line bg-surface-strong shadow-[var(--panel-shadow)] ${className ?? ''}`}
+    >
+      {children}
+    </section>
+  );
+}
+
+export function ContentPanelHeader({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-6 border-b border-line px-[var(--section-padding-x)] py-[var(--section-padding-y)]">
+      <div className="min-w-0">
+        <h2 className="text-[2rem] font-semibold tracking-tight text-foreground">{title}</h2>
+        {description ? (
+          <p className="mt-2 text-[1.05rem] leading-7 text-muted">{description}</p>
+        ) : null}
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+export function StatusBadge({
+  label,
+  tone = 'default',
+}: {
+  label: string;
+  tone?: 'default' | 'accent' | 'success' | 'progress';
+}) {
+  const toneClass =
+    tone === 'accent'
+      ? 'bg-accent-soft text-accent'
+      : tone === 'success'
+        ? 'bg-success-soft text-[var(--color-success)]'
+        : tone === 'progress'
+          ? 'bg-[#e8eef8] text-[#365489]'
+          : 'bg-surface-muted text-muted';
+
+  return (
+    <span className={`inline-flex min-h-8 items-center rounded-full px-3 text-xs font-semibold ${toneClass}`}>
+      {label}
+    </span>
+  );
+}
+
 interface PageSurfaceProps {
   eyebrow?: string;
   title?: string;

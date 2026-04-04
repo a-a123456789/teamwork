@@ -6,6 +6,8 @@ import type {
   WorkspaceRole,
 } from '@teamwork/types';
 import { ApiError, updateWorkspaceMemberRole } from '@/lib/api/client';
+import { ContentPanel, ContentPanelHeader } from '@/components/app-shell/page-state';
+import { getTextControlClassName } from '@/components/ui/form-controls';
 
 interface MembersPageProps {
   workspaceId: string;
@@ -95,13 +97,11 @@ export function MembersPage({
   };
 
   return (
-    <section className="rounded-[1.5rem] border border-line bg-surface-strong shadow-[0_18px_38px_rgba(15,23,20,0.06)]">
-      <div className="border-b border-line px-8 py-7">
-        <h2 className="text-[2rem] font-semibold tracking-tight text-foreground">Members</h2>
-        <p className="mt-2 text-[1.1rem] leading-7 text-[#8a98af]">
-          Manage workspace members and their roles
-        </p>
-      </div>
+    <ContentPanel>
+      <ContentPanelHeader
+        title="Members"
+        description="Manage workspace members and their roles"
+      />
 
       <div className="divide-y divide-line">
         {sortedMembers.map((member) => {
@@ -121,13 +121,13 @@ export function MembersPage({
       </div>
 
       <OwnerNotice />
-    </section>
+    </ContentPanel>
   );
 }
 
 export function MembersPageSkeleton() {
   return (
-    <section className="rounded-[1.5rem] border border-line bg-surface-strong shadow-[0_18px_38px_rgba(15,23,20,0.06)]">
+    <ContentPanel>
       <div className="border-b border-line px-8 py-7">
         <div className="h-10 w-44 animate-pulse rounded-2xl bg-black/10" />
         <div className="mt-3 h-6 w-72 animate-pulse rounded-2xl bg-black/5" />
@@ -150,7 +150,7 @@ export function MembersPageSkeleton() {
         <div className="h-5 w-64 animate-pulse rounded-full bg-black/5" />
         <div className="mt-3 h-4 w-[30rem] max-w-full animate-pulse rounded-full bg-black/5" />
       </div>
-    </section>
+    </ContentPanel>
   );
 }
 
@@ -247,7 +247,7 @@ function RoleControl({
           onChange(nextRole);
         }
       }}
-      className="min-h-11 w-full rounded-[0.95rem] border border-line bg-[#f7faff] px-4 text-sm font-semibold capitalize text-[#5f7088] outline-none transition-colors focus:border-accent disabled:cursor-not-allowed disabled:opacity-60"
+      className={`${getTextControlClassName(false)} w-full font-semibold capitalize text-[#5f7088] disabled:cursor-not-allowed disabled:opacity-60`}
     >
       <option value="owner">Owner</option>
       <option value="member">Member</option>

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { WorkspaceResponse } from '@teamwork/types';
+import { ContentPanel } from '@/components/app-shell/page-state';
 
 interface BoardWorkspaceSummaryProps {
   workspace: WorkspaceResponse['workspace'];
@@ -7,7 +8,8 @@ interface BoardWorkspaceSummaryProps {
 
 export function BoardWorkspaceSummary({ workspace }: BoardWorkspaceSummaryProps) {
   return (
-    <section className="flex items-center justify-between gap-6 rounded-[1.5rem] border border-line bg-surface-strong px-6 py-5 shadow-[0_14px_32px_rgba(15,23,20,0.05)]">
+    <ContentPanel className="px-6 py-5">
+      <div className="flex items-center justify-between gap-6">
       <div className="min-w-0">
         <h2 className="truncate text-[1.85rem] font-semibold tracking-tight text-foreground">
           {workspace.name}
@@ -23,7 +25,8 @@ export function BoardWorkspaceSummary({ workspace }: BoardWorkspaceSummaryProps)
           value={`${String(workspace.invitationCount)} pending`}
         />
       </div>
-    </section>
+      </div>
+    </ContentPanel>
   );
 }
 

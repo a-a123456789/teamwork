@@ -11,6 +11,7 @@ import {
 } from '@/lib/auth/forms';
 import { getWorkspaceBoardHref } from '@/lib/app-shell';
 import { AuthFormError, AuthField, getAuthFieldClassName } from '@/components/auth/auth-form-controls';
+import { AppButton } from '@/components/ui/button';
 
 const INITIAL_VALUES: SignUpFormValues = {
   name: '',
@@ -136,13 +137,9 @@ export function SignUpForm() {
         />
       </AuthField>
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="mt-1 inline-flex min-h-12 items-center justify-center rounded-[0.95rem] bg-foreground px-5 text-base font-semibold text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <AppButton type="submit" disabled={isSubmitting} className="mt-1 text-base">
         {isSubmitting ? 'Creating account...' : 'Create account'}
-      </button>
+      </AppButton>
 
       {errors.form ? <AuthFormError message={errors.form} /> : null}
     </form>
