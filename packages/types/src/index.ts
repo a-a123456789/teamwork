@@ -110,6 +110,28 @@ export interface RegisterResponse extends AuthPayload {
   memberships: WorkspaceMembershipSummary[];
 }
 
+export interface AuthMeResponse {
+  user: UserSummary;
+  workspaces: AuthenticatedWorkspace[];
+  activeWorkspace: AuthenticatedWorkspace | null;
+}
+
+export interface WorkspacesListResponse {
+  workspaces: AuthenticatedWorkspace[];
+}
+
+export interface WorkspaceResponse {
+  workspace: WorkspaceDetails;
+}
+
+export interface WorkspaceMembersResponse {
+  members: WorkspaceMemberDetail[];
+}
+
+export interface WorkspaceInvitationsResponse {
+  invitations: WorkspaceInvitationSummary[];
+}
+
 export interface JwtAccessTokenPayload {
   sub: ID;
   email: string;
