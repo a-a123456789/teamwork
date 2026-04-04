@@ -1,6 +1,7 @@
 import type {
   AuthMeResponse,
   CreateTaskInput,
+  InviteWorkspaceMemberResult,
   TaskDeleteResponse,
   TaskListResponse,
   TaskResponse,
@@ -8,6 +9,7 @@ import type {
   UpdateTaskAssigneeInput,
   UpdateTaskInput,
   UpdateTaskStatusInput,
+  WorkspaceInvitationResponse,
   WorkspaceMemberResponse,
   WorkspaceInvitationsResponse,
   WorkspaceMembersResponse,
@@ -15,6 +17,8 @@ import type {
 } from '@teamwork/types';
 import {
   parseAuthMeResponse,
+  parseInviteWorkspaceMemberResult,
+  parseWorkspaceInvitationResponse,
   parseWorkspaceMemberResponse,
   parseTaskListResponse,
   parseTaskResponse,
@@ -88,6 +92,34 @@ export async function getWorkspaceInvitations(
   return apiRequest(`/workspaces/${workspaceId}/invitations`, {
     accessToken,
     parser: parseWorkspaceInvitationsResponse,
+  });
+}
+
+export async function inviteWorkspaceMember(
+  workspaceId: string,
+  accessToken: string,
+  input: {
+    email: string;
+    role?: 'owner' | 'member';
+  },
+): Promise<InviteWorkspaceMemberResult> {
+  return apiRequest(`/workspaces/${workspaceId}/members`, {
+    accessToken,
+    method: 'POST',
+    body: JSON.stringify(input),
+    parser: parseInviteWorkspaceMemberResult,
+  });
+}
+
+export async function revokeWorkspaceInvitation(
+  workspaceId: string,
+  invitationId: string,
+  accessToken: string,
+): Promise<WorkspaceInvitationResponse> {
+  return apiRequest(`/workspaces/${workspaceId}/invitations/${invitationId}`, {
+    accessToken,
+    method: 'DELETE',
+    parser: parseWorkspaceInvitationResponse,
   });
 }
 

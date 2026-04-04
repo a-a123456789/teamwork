@@ -153,6 +153,10 @@ export interface WorkspaceMemberResponse {
   membership: WorkspaceMemberDetail;
 }
 
+export interface WorkspaceInvitationResponse {
+  invitation: WorkspaceInvitationSummary;
+}
+
 export interface WorkspaceInvitationsResponse {
   invitations: WorkspaceInvitationSummary[];
 }

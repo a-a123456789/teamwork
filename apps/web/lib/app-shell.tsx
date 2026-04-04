@@ -137,8 +137,8 @@ export function deriveShellRouteContext(
       definition: {
         key: 'invitations',
         title: 'Invitations',
-        subtitle: `${workspaceName} invitation flows use the real owner-protected backend route.`,
-        eyebrow: 'Owner workflow',
+        subtitle: `Invite new members to ${workspaceName} and manage pending invites.`,
+        eyebrow: 'Workspace invitations',
       },
       currentWorkspace,
     };

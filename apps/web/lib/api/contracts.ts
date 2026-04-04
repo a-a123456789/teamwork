@@ -1,10 +1,12 @@
 import type {
   AuthMeResponse,
   AuthenticatedWorkspace,
+  InviteWorkspaceMemberResult,
   TaskListResponse,
   TaskResponse,
   UserSummary,
   WorkspaceInvitationSummary,
+  WorkspaceInvitationResponse,
   WorkspaceInvitationsResponse,
   WorkspaceMemberDetail,
   WorkspaceMemberResponse,
@@ -57,6 +59,29 @@ export function parseWorkspaceInvitationsResponse(
 
   return {
     invitations: readArray(record['invitations'], parseWorkspaceInvitationSummary),
+  };
+}
+
+export function parseWorkspaceInvitationResponse(
+  value: unknown,
+): WorkspaceInvitationResponse {
+  const record = readRecord(value);
+
+  return {
+    invitation: parseWorkspaceInvitationSummary(record['invitation']),
+  };
+}
+
+export function parseInviteWorkspaceMemberResult(
+  value: unknown,
+): InviteWorkspaceMemberResult {
+  const record = readRecord(value);
+
+  return {
+    kind: readInviteResultKind(record['kind']),
+    invitation: parseWorkspaceInvitationSummary(record['invitation']),
+    token: readString(record['token']),
+    inviteUrl: readString(record['inviteUrl']),
   };
 }
 
@@ -238,4 +263,14 @@ function readTaskStatus(value: unknown): TaskListResponse['tasks'][number]['stat
   }
 
   throw new Error('Expected task status.');
+}
+
+function readInviteResultKind(
+  value: unknown,
+): InviteWorkspaceMemberResult['kind'] {
+  if (value === 'invitation') {
+    return value;
+  }
+
+  throw new Error('Expected invite result kind.');
 }
