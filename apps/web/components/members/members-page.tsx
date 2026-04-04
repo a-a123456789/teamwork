@@ -128,27 +128,27 @@ export function MembersPage({
 export function MembersPageSkeleton() {
   return (
     <ContentPanel>
-      <div className="border-b border-line px-8 py-7">
-        <div className="h-10 w-44 animate-pulse rounded-2xl bg-black/10" />
-        <div className="mt-3 h-6 w-72 animate-pulse rounded-2xl bg-black/5" />
+      <div className="border-b border-line px-7 py-6">
+        <div className="h-9 w-40 animate-pulse rounded-xl bg-black/10" />
+        <div className="mt-2.5 h-5 w-64 animate-pulse rounded-xl bg-black/5" />
       </div>
       <div className="divide-y divide-line">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={String(index)} className="flex items-center justify-between gap-6 px-8 py-5">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 animate-pulse rounded-full bg-black/10" />
+          <div key={String(index)} className="flex items-center justify-between gap-6 px-7 py-4.5">
+            <div className="flex items-center gap-3.5">
+              <div className="h-11 w-11 animate-pulse rounded-full bg-black/10" />
               <div className="space-y-2">
-                <div className="h-5 w-40 animate-pulse rounded-full bg-black/10" />
+                <div className="h-5 w-36 animate-pulse rounded-full bg-black/10" />
                 <div className="h-4 w-52 animate-pulse rounded-full bg-black/5" />
               </div>
             </div>
-            <div className="h-12 w-28 animate-pulse rounded-[0.95rem] bg-black/5" />
+            <div className="h-11 w-26 animate-pulse rounded-[0.85rem] bg-black/5" />
           </div>
         ))}
       </div>
-      <div className="rounded-b-[1.5rem] border-t border-line bg-[#e6faee] px-8 py-5">
-        <div className="h-5 w-64 animate-pulse rounded-full bg-black/5" />
-        <div className="mt-3 h-4 w-[30rem] max-w-full animate-pulse rounded-full bg-black/5" />
+      <div className="rounded-b-[1.25rem] border-t border-line bg-[#edf9f1] px-7 py-4.5">
+        <div className="h-5 w-60 animate-pulse rounded-full bg-black/5" />
+        <div className="mt-2.5 h-4 w-[28rem] max-w-full animate-pulse rounded-full bg-black/5" />
       </div>
     </ContentPanel>
   );
@@ -171,19 +171,19 @@ function MemberRow({
   ) => Promise<void>;
 }) {
   return (
-    <div className="px-8 py-5">
+    <div className="px-7 py-4.5">
       <div className="flex items-center justify-between gap-6">
-        <div className="flex min-w-0 items-center gap-4">
+        <div className="flex min-w-0 items-center gap-3.5">
           <MemberAvatar displayName={member.user.displayName} />
           <div className="min-w-0">
-            <p className="truncate text-[1.32rem] font-semibold tracking-tight text-foreground">
+            <p className="truncate text-[1.18rem] font-semibold tracking-tight text-foreground">
               {member.user.displayName}
             </p>
-            <p className="truncate text-[1rem] leading-6 text-[#95a3b9]">{member.user.email}</p>
+            <p className="truncate text-[0.93rem] leading-6 text-[#93a0b2]">{member.user.email}</p>
           </div>
         </div>
 
-        <div className="flex w-32 shrink-0 flex-col items-end gap-2">
+        <div className="flex w-[118px] shrink-0 flex-col items-end gap-2">
           <RoleControl
             value={member.role}
             isEditable={isEditable}
@@ -196,7 +196,7 @@ function MemberRow({
       </div>
 
       {errorMessage ? (
-        <p className="mt-3 pl-16 text-sm leading-6 text-danger">{errorMessage}</p>
+        <p className="mt-2.5 pl-14 text-[0.88rem] leading-6 text-danger">{errorMessage}</p>
       ) : null}
     </div>
   );
@@ -211,7 +211,7 @@ function MemberAvatar({ displayName }: { displayName: string }) {
     .join('') || 'M';
 
   return (
-    <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#38465e] text-sm font-semibold text-white">
+    <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#38465e] text-[0.88rem] font-semibold text-white">
       {initials}
     </div>
   );
@@ -230,7 +230,7 @@ function RoleControl({
 }) {
   if (!isEditable) {
     return (
-      <div className="inline-flex min-h-11 w-full items-center justify-center rounded-[0.95rem] border border-line bg-[#f7faff] px-4 text-sm font-semibold capitalize text-[#7e8da5]">
+      <div className="inline-flex min-h-10 w-full items-center justify-center rounded-[0.85rem] border border-line bg-[#f7faff] px-3.5 text-[0.9rem] font-semibold capitalize text-[#7e8da5]">
         {value}
       </div>
     );
@@ -247,7 +247,7 @@ function RoleControl({
           onChange(nextRole);
         }
       }}
-      className={`${getTextControlClassName(false)} w-full font-semibold capitalize text-[#5f7088] disabled:cursor-not-allowed disabled:opacity-60`}
+      className={`${getTextControlClassName(false)} min-h-10 w-full px-3.5 py-2 text-[0.9rem] font-semibold capitalize text-[#5f7088] disabled:cursor-not-allowed disabled:opacity-60`}
     >
       <option value="owner">Owner</option>
       <option value="member">Member</option>
@@ -257,12 +257,12 @@ function RoleControl({
 
 function OwnerNotice() {
   return (
-    <div className="rounded-b-[1.5rem] border-t border-line bg-[#e6faee] px-8 py-5">
-      <div className="flex items-start gap-3">
+    <div className="rounded-b-[1.25rem] border-t border-line bg-[#edf9f1] px-7 py-4.5">
+      <div className="flex items-start gap-2.5">
         <NoticeIcon />
         <div>
-          <p className="text-base font-semibold text-foreground">At least one owner required</p>
-          <p className="mt-1 text-[1rem] leading-7 text-[#7b8e88]">
+          <p className="text-[0.98rem] font-semibold text-foreground">At least one owner required</p>
+          <p className="mt-1 text-[0.92rem] leading-6 text-[#7b8e88]">
             You cannot change the last owner&apos;s role. Promote another member to owner first.
           </p>
         </div>
@@ -275,7 +275,7 @@ function NoticeIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="mt-0.5 h-5 w-5 shrink-0 text-[#5f6f88]"
+      className="mt-0.5 h-4.5 w-4.5 shrink-0 text-[#5f6f88]"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.9"
