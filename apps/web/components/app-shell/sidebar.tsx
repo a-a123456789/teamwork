@@ -26,7 +26,7 @@ export function SidebarNavigation({
         <h2 className="mt-2.5 text-[1.48rem] font-semibold tracking-tight text-foreground">
           {currentWorkspace?.name ?? 'Workspace'}
         </h2>
-        <p className="mt-2.5 text-[0.92rem] leading-6 text-muted">
+        <p className="mt-2 text-[0.92rem] leading-6 text-muted">
           Shared navigation and page framing for the authenticated app.
         </p>
       </div>
@@ -55,13 +55,13 @@ function SidebarLink({ item, isActive }: SidebarLinkProps) {
       href={item.href}
       className={`group flex items-center gap-3 rounded-[0.95rem] px-3.5 py-3 transition-colors ${
         isActive
-          ? 'bg-accent text-white shadow-sm'
+          ? 'bg-accent text-white shadow-[0_8px_18px_rgba(51,65,85,0.14)]'
           : 'text-foreground hover:bg-surface-muted'
       }`}
     >
       <span
         className={`flex h-[2.375rem] w-[2.375rem] items-center justify-center rounded-[0.82rem] transition-colors ${
-          isActive ? 'bg-white/14 text-white' : 'bg-accent-soft text-accent-strong'
+          isActive ? 'bg-white/14 text-white' : 'bg-accent-soft text-accent'
         }`}
       >
         {item.icon}

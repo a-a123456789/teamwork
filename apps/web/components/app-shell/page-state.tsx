@@ -26,7 +26,7 @@ export function PageStatusCard({
 }: PageStatusCardProps) {
   return (
     <section
-      className={`shell-panel rounded-[var(--radius-panel)] border px-[var(--section-padding-x)] py-[var(--section-padding-y)] shadow-[var(--shadow)] ${toneClasses[tone]}`}
+      className={`shell-panel rounded-[var(--radius-panel)] border px-[var(--section-padding-x)] py-[var(--section-padding-y)] shadow-[var(--panel-shadow)] ${toneClasses[tone]}`}
     >
       <h2 className="text-[1.42rem] font-semibold tracking-tight text-foreground">{title}</h2>
       <p className="mt-2.5 max-w-2xl text-[0.94rem] leading-6 text-muted">{description}</p>
@@ -91,10 +91,10 @@ export function StatusBadge({
     tone === 'accent'
       ? 'bg-accent text-white'
       : tone === 'success'
-        ? 'bg-success-soft text-foreground'
+        ? 'border border-[rgba(134,239,172,0.32)] bg-success-soft text-foreground'
         : tone === 'progress'
-          ? 'bg-[var(--color-info-soft)] text-foreground'
-          : 'bg-surface-muted text-muted';
+          ? 'border border-[rgba(45,212,191,0.2)] bg-[var(--color-info-soft)] text-foreground'
+          : 'border border-line/70 bg-surface-muted text-muted';
 
   return (
     <span

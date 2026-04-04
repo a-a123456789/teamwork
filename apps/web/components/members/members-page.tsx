@@ -134,7 +134,7 @@ export function MembersPageSkeleton() {
       </div>
       <div className="divide-y divide-line">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={String(index)} className="flex items-center justify-between gap-6 px-7 py-4.5">
+          <div key={String(index)} className="flex items-center justify-between gap-6 px-7 py-4">
             <div className="flex items-center gap-3.5">
               <div className="h-11 w-11 animate-pulse rounded-full bg-black/10" />
               <div className="space-y-2">
@@ -146,7 +146,7 @@ export function MembersPageSkeleton() {
           </div>
         ))}
       </div>
-      <div className="rounded-b-[1.25rem] border-t border-line bg-success-soft px-7 py-4.5">
+      <div className="rounded-b-[1.25rem] border-t border-line bg-success-soft px-7 py-4">
         <div className="h-5 w-60 animate-pulse rounded-full bg-black/5" />
         <div className="mt-2.5 h-4 w-[28rem] max-w-full animate-pulse rounded-full bg-black/5" />
       </div>
@@ -171,7 +171,7 @@ function MemberRow({
   ) => Promise<void>;
 }) {
   return (
-    <div className="px-7 py-4.5">
+    <div className="px-7 py-4">
       <div className="flex items-center justify-between gap-6">
         <div className="flex min-w-0 items-center gap-3.5">
           <MemberAvatar displayName={member.user.displayName} />
@@ -230,7 +230,7 @@ function RoleControl({
 }) {
   if (!isEditable) {
     return (
-      <div className="inline-flex min-h-10 w-full items-center justify-center rounded-[0.85rem] border border-line bg-surface-muted px-3.5 text-[0.9rem] font-semibold capitalize text-muted">
+      <div className="inline-flex min-h-10 w-full items-center justify-center rounded-[0.85rem] border border-line bg-surface-muted px-3.5 text-[0.9rem] font-semibold capitalize text-muted shadow-[0_1px_2px_rgba(15,23,42,0.02)]">
         {value}
       </div>
     );
@@ -257,7 +257,7 @@ function RoleControl({
 
 function OwnerNotice() {
   return (
-    <div className="rounded-b-[1.25rem] border-t border-line bg-success-soft px-7 py-4.5">
+    <div className="rounded-b-[1.25rem] border-t border-line bg-success-soft px-7 py-4">
       <div className="flex items-start gap-2.5">
         <NoticeIcon />
         <div>

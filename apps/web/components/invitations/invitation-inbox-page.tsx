@@ -79,13 +79,13 @@ export function InvitationInboxPage({
         <h2 className="text-[1.82rem] font-semibold tracking-tight text-foreground">
           Invitation Inbox
         </h2>
-        <p className="mt-1.5 text-[0.98rem] leading-6 text-muted">
+        <p className="mt-1 text-[0.96rem] leading-6 text-muted">
           Workspace invitations you&apos;ve received
         </p>
       </section>
 
       {successWorkspaceName ? (
-        <section className="rounded-[calc(var(--radius-control)+0.22rem)] border border-line bg-[var(--color-info-soft)] px-5 py-4">
+        <section className="rounded-[calc(var(--radius-control)+0.22rem)] border border-line bg-[var(--color-info-soft)] px-5 py-4 shadow-[var(--panel-shadow)]">
           <p className="text-[0.9rem] font-semibold text-foreground">
             Invitation accepted for {successWorkspaceName}
           </p>
@@ -134,7 +134,7 @@ export function InvitationInboxPageSkeleton() {
       </section>
 
       <section className="rounded-[1.5rem] border border-line bg-surface-strong shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
-        <div className="px-7 py-4.5">
+        <div className="px-7 py-4">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3.5">
               <div className="h-11 w-11 animate-pulse rounded-full bg-black/10" />
@@ -163,7 +163,7 @@ function InvitationInboxRow({
   onAccept: (item: UserInvitationInboxItem) => Promise<void>;
 }) {
   return (
-    <div className="px-7 py-4.5">
+    <div className="px-7 py-4">
       <div className="flex items-center justify-between gap-6">
         <div className="flex min-w-0 items-center gap-3.5">
           <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-accent">
