@@ -97,16 +97,3 @@ select {
     linear-gradient(to bottom, rgba(21, 32, 27, 0.035) 1px, transparent 1px);
   background-size: 22px 22px;
 }
-*** Add File: apps/web/app/providers.tsx
-'use client';
-
-import type { ReactNode } from 'react';
-import { AuthSessionProvider } from '@/lib/auth/auth-session-provider';
-
-interface ProvidersProps {
-  children: ReactNode;
-}
-
-export function Providers({ children }: ProvidersProps): ReactNode {
-  return <AuthSessionProvider>{children}</AuthSessionProvider>;
-}

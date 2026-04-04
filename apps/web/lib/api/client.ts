@@ -1,6 +1,7 @@
 import type {
   AuthMeResponse,
   TaskListResponse,
+  TaskAssignmentFilter,
   WorkspaceInvitationsResponse,
   WorkspaceMembersResponse,
   WorkspaceResponse,
@@ -67,6 +68,30 @@ export async function getWorkspaceInvitations(
 
 export async function listInboxTasks(accessToken: string): Promise<TaskListResponse> {
   return apiRequest('/tasks', {
+    accessToken,
+    parser: parseTaskListResponse,
+  });
+}
+
+export async function listWorkspaceTasks(
+  workspaceId: string,
+  accessToken: string,
+  filters?: {
+    assignment?: TaskAssignmentFilter;
+  },
+): Promise<TaskListResponse> {
+  const searchParams = new URLSearchParams();
+
+  if (filters?.assignment) {
+    searchParams.set('assignment', filters.assignment);
+  }
+
+  const queryString = searchParams.toString();
+  const path = queryString
+    ? `/workspaces/${workspaceId}/tasks?${queryString}`
+    : `/workspaces/${workspaceId}/tasks`;
+
+  return apiRequest(path, {
     accessToken,
     parser: parseTaskListResponse,
   });

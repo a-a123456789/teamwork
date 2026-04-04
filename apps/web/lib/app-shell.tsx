@@ -159,8 +159,8 @@ export function deriveShellRouteContext(
     definition: {
       key: 'board',
       title: 'Board',
-      subtitle: `${workspaceName} is connected and ready for task board content.`,
-      eyebrow: 'Workspace overview',
+      subtitle: `${workspaceName} board activity, filters, and task progress in one view.`,
+      eyebrow: 'Workspace board',
       action: {
         label: 'Create Task',
       },
