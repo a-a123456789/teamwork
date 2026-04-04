@@ -1,13 +1,19 @@
-import { PageStatusCard } from '@/components/app-shell/page-state';
+import { AuthLayout } from '@/components/auth/auth-layout';
+import { AuthRedirectGuard } from '@/components/auth/auth-redirect-guard';
+import { SignInForm } from '@/components/auth/sign-in-form';
 
 export default function AuthRequiredPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-10">
-      <PageStatusCard
-        title="Authentication required"
-        description="The frontend shell is wired to the real backend auth flow. Connect your login screen to store an access token, then reopen the app."
-        tone="warning"
-      />
-    </main>
+    <AuthRedirectGuard>
+      <AuthLayout
+        title="TeamWork"
+        subtitle="Sign in to your account"
+        helperText="Don't have an account?"
+        helperHref="/sign-up"
+        helperLabel="Sign up"
+      >
+        <SignInForm />
+      </AuthLayout>
+    </AuthRedirectGuard>
   );
 }

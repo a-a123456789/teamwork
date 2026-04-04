@@ -1,7 +1,9 @@
 import type {
+  AuthPayload,
   AuthMeResponse,
   AuthenticatedWorkspace,
   InviteWorkspaceMemberResult,
+  RegisterResponse,
   TaskListResponse,
   TaskResponse,
   UserSummary,
@@ -18,6 +20,16 @@ import type {
 } from '@teamwork/types';
 
 type UnknownRecord = Record<string, unknown>;
+
+export function parseAuthPayload(value: unknown): AuthPayload {
+  const record = readRecord(value);
+
+  return {
+    user: parseUserSummary(record['user']),
+    workspaces: readArray(record['workspaces'], parseAuthenticatedWorkspace),
+    accessToken: readString(record['accessToken']),
+  };
+}
 
 export function parseAuthMeResponse(value: unknown): AuthMeResponse {
   const record = readRecord(value);
@@ -91,6 +103,16 @@ export function parseInviteWorkspaceMemberResult(
     invitation: parseWorkspaceInvitationSummary(record['invitation']),
     token: readString(record['token']),
     inviteUrl: readString(record['inviteUrl']),
+  };
+}
+
+export function parseRegisterResponse(value: unknown): RegisterResponse {
+  const record = readRecord(value);
+
+  return {
+    ...parseAuthPayload(value),
+    workspace: parseWorkspaceSummary(record['workspace']),
+    memberships: readArray(record['memberships'], parseWorkspaceMembershipSummary),
   };
 }
 

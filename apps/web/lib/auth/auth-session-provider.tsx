@@ -18,13 +18,20 @@ import {
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 
+export interface AuthSessionResult {
+  status: AuthStatus;
+  auth: AuthMeResponse;
+  accessToken: string | null;
+  errorMessage: string | null;
+}
+
 interface AuthSessionContextValue {
   status: AuthStatus;
   auth: AuthMeResponse;
   accessToken: string | null;
   errorMessage: string | null;
   refreshSession: () => Promise<void>;
-  setAccessToken: (token: string) => Promise<void>;
+  setAccessToken: (token: string) => Promise<AuthSessionResult>;
   clearSession: () => void;
 }
 
@@ -41,13 +48,6 @@ const EMPTY_AUTH: AuthMeResponse = {
 };
 
 const AuthSessionContext = createContext<AuthSessionContextValue | null>(null);
-
-interface ResolvedSessionState {
-  status: AuthStatus;
-  auth: AuthMeResponse;
-  accessToken: string | null;
-  errorMessage: string | null;
-}
 
 export function AuthSessionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
@@ -104,6 +104,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
           setAccessTokenState,
           setErrorMessage,
         });
+        return nextState;
       },
       clearSession: () => {
         clearStoredAccessToken();
@@ -119,7 +120,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
   return <AuthSessionContext.Provider value={contextValue}>{children}</AuthSessionContext.Provider>;
 }
 
-async function resolveSessionState(tokenOverride?: string | null): Promise<ResolvedSessionState> {
+async function resolveSessionState(tokenOverride?: string | null): Promise<AuthSessionResult> {
     const token = tokenOverride ?? getStoredAccessToken();
 
     if (!token) {
@@ -160,7 +161,7 @@ async function resolveSessionState(tokenOverride?: string | null): Promise<Resol
 }
 
 function applyResolvedSessionState(
-  nextState: ResolvedSessionState,
+  nextState: AuthSessionResult,
   setters: {
     setStatus: (status: AuthStatus) => void;
     setAuth: (auth: AuthMeResponse) => void;

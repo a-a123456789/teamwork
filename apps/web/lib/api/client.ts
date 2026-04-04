@@ -1,7 +1,9 @@
 import type {
+  AuthPayload,
   AuthMeResponse,
   CreateTaskInput,
   InviteWorkspaceMemberResult,
+  RegisterResponse,
   UserInvitationsResponse,
   TaskDeleteResponse,
   TaskListResponse,
@@ -17,8 +19,10 @@ import type {
   WorkspaceResponse,
 } from '@teamwork/types';
 import {
+  parseAuthPayload,
   parseAuthMeResponse,
   parseInviteWorkspaceMemberResult,
+  parseRegisterResponse,
   parseUserInvitationsResponse,
   parseWorkspaceInvitationResponse,
   parseWorkspaceMemberResponse,
@@ -30,7 +34,7 @@ import {
 } from '@/lib/api/contracts';
 
 interface ApiRequestOptions<T> {
-  accessToken: string;
+  accessToken?: string;
   parser: (value: unknown) => T;
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: string;
@@ -50,6 +54,30 @@ export async function getAuthMe(accessToken: string): Promise<AuthMeResponse> {
   return apiRequest('/auth/me', {
     accessToken,
     parser: parseAuthMeResponse,
+  });
+}
+
+export async function login(input: {
+  email: string;
+  password: string;
+}): Promise<AuthPayload> {
+  return apiRequest('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    parser: parseAuthPayload,
+  });
+}
+
+export async function register(input: {
+  email: string;
+  password: string;
+  displayName: string;
+  workspaceName?: string;
+}): Promise<RegisterResponse> {
+  return apiRequest('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    parser: parseRegisterResponse,
   });
 }
 
@@ -255,10 +283,14 @@ export async function deleteWorkspaceTask(
 }
 
 async function apiRequest<T>(path: string, options: ApiRequestOptions<T>): Promise<T> {
+  const authorizationHeader = options.accessToken
+    ? { Authorization: `Bearer ${options.accessToken}` }
+    : {};
+
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method: options.method ?? 'GET',
     headers: {
-      Authorization: `Bearer ${options.accessToken}`,
+      ...authorizationHeader,
       Accept: 'application/json',
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     },
