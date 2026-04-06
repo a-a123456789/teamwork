@@ -63,7 +63,7 @@ export function CalendarPage({
         : monthCells.some((cell) => cell.tasks.length > 0);
 
   return (
-    <ContentPanel className="overflow-hidden">
+    <ContentPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <CalendarToolbar
         currentFilter={currentFilter}
         currentView={currentView}
@@ -74,9 +74,9 @@ export function CalendarPage({
         onToday={onToday}
       />
 
-      <div className="border-b border-line px-6 py-7 text-center">
-        <p className="text-[1.85rem] font-semibold tracking-tight text-foreground">{heading}</p>
-        <p className="mt-1.5 text-[0.9rem] text-muted">
+      <div className="border-b border-line px-5 py-5 text-center">
+        <p className="text-[1.6rem] font-semibold tracking-tight text-foreground">{heading}</p>
+        <p className="mt-1 text-[0.875rem] text-muted">
           {workspace.name} due dates shown in the {currentView} calendar view.
         </p>
       </div>
@@ -90,21 +90,29 @@ export function CalendarPage({
       ) : null}
 
       {currentView === 'month' ? (
-        <CalendarMonthView cells={monthCells} onTaskOpen={onTaskOpen} onShowMore={onShowMore} />
+        <div className="flex min-h-0 flex-1">
+          <CalendarMonthView cells={monthCells} onTaskOpen={onTaskOpen} onShowMore={onShowMore} />
+        </div>
       ) : null}
 
       {currentView === 'week' ? (
-        <CalendarWeekView days={weekDays} onTaskOpen={onTaskOpen} />
+        <div className="flex min-h-0 flex-1">
+          <CalendarWeekView days={weekDays} onTaskOpen={onTaskOpen} />
+        </div>
       ) : null}
 
-      {currentView === 'day' ? <CalendarDayView tasks={dayTasks} onTaskOpen={onTaskOpen} /> : null}
+      {currentView === 'day' ? (
+        <div className="flex min-h-0 flex-1">
+          <CalendarDayView tasks={dayTasks} onTaskOpen={onTaskOpen} />
+        </div>
+      ) : null}
     </ContentPanel>
   );
 }
 
 function CalendarEmptyState({ message }: { message: string }) {
   return (
-    <div className="border-b border-line bg-surface-muted px-6 py-3.5 text-[0.9rem] leading-6 text-muted">
+    <div className="border-b border-line bg-surface-muted px-5 py-3 text-[0.875rem] leading-6 text-muted">
       {message}
     </div>
   );
