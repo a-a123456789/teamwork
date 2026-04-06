@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
@@ -22,12 +22,21 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
       isGlobal: true,
       validate: validateEnvironment,
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60_000,
-        limit: 20,
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const nodeEnv = configService.get<string>('NODE_ENV');
+        const isProduction = nodeEnv === 'production';
+
+        return [
+          {
+            ttl: 60_000,
+            limit: isProduction ? 20 : 500,
+            skipIf: () => !isProduction,
+          },
+        ];
       },
-    ]),
+    }),
     PrismaModule,
     UsersModule,
     MembershipsModule,

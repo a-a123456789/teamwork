@@ -1,5 +1,4 @@
 import type { GroupedBoardColumn } from '@/lib/board';
-import { StatusBadge } from '@/components/app-shell/page-state';
 import { BoardTaskCard } from '@/components/board/task-card';
 
 interface BoardColumnProps {
@@ -9,22 +8,27 @@ interface BoardColumnProps {
 }
 
 export function BoardColumn({ column, hasAnyVisibleTasks, onTaskOpen }: BoardColumnProps) {
+  const accent = readColumnAccent(column.status);
+
   return (
-    <section className="flex min-w-[300px] flex-1 flex-col">
-      <div className="flex items-center gap-2.5 px-0.5 pb-3">
-        <h3 className="text-[1.45rem] font-semibold tracking-tight text-foreground">
+    <section className="flex min-w-0 flex-1 flex-col px-[1rem] py-[1.25rem] sm:px-[1.25rem] sm:py-[1.5rem]">
+      <div className="flex flex-wrap items-center gap-x-[0.75rem] gap-y-[0.5rem] pb-[1rem] sm:pb-[1.5rem]">
+        <span className={`h-[1rem] w-[1rem] rounded-full ${accent.dotClassName}`} />
+        <h3 className="text-[1.125rem] font-semibold tracking-tight text-foreground sm:text-[1.375rem]">
           {column.title}
         </h3>
-        <StatusBadge label={String(column.tasks.length)} />
+        <span className="inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full bg-surface-muted px-[0.625rem] text-[0.9375rem] font-medium text-muted">
+          {String(column.tasks.length)}
+        </span>
       </div>
 
-      <div className="flex min-h-[430px] flex-col gap-3 rounded-[1.1rem] border border-line/50 bg-[rgba(246,248,245,0.72)] p-2.5">
+      <div className="flex min-h-[16rem] flex-col gap-[0.875rem] sm:min-h-[22rem] sm:gap-[1rem]">
         {column.tasks.map((task) => (
           <BoardTaskCard key={task.id} task={task} onOpen={onTaskOpen} />
         ))}
 
         {column.tasks.length === 0 ? (
-          <div className="flex min-h-[140px] items-center justify-center rounded-[0.95rem] border border-dashed border-line/80 bg-white/78 px-5 text-center text-[0.9rem] leading-6 text-muted">
+          <div className="flex min-h-[8rem] items-center justify-center rounded-[0.875rem] border border-dashed border-line bg-surface-muted/50 px-[1rem] text-center text-[0.875rem] leading-[1.5rem] text-muted">
             {hasAnyVisibleTasks
               ? `No ${column.title.toLowerCase()} tasks right now.`
               : 'No tasks match the current filters.'}
@@ -33,4 +37,16 @@ export function BoardColumn({ column, hasAnyVisibleTasks, onTaskOpen }: BoardCol
       </div>
     </section>
   );
+}
+
+function readColumnAccent(status: GroupedBoardColumn['status']): { dotClassName: string } {
+  if (status === 'todo') {
+    return { dotClassName: 'bg-[#7be7a5]' };
+  }
+
+  if (status === 'in_progress') {
+    return { dotClassName: 'bg-[#ffbc00]' };
+  }
+
+  return { dotClassName: 'bg-[#7a2cf5]' };
 }

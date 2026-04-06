@@ -12,9 +12,10 @@ export function AppShellHeader({ routeContext }: AppShellHeaderProps) {
   const { actionOverride } = useAppShellAction();
   const action = actionOverride ?? routeContext.definition.action;
   const actionClassName =
-    'inline-flex min-h-10 items-center justify-center rounded-[0.92rem] bg-accent px-[1.125rem] text-[0.94rem] font-semibold text-white transition-colors hover:bg-accent-strong';
+    'inline-flex min-h-10 items-center justify-center gap-2.5 rounded-[0.92rem] bg-accent px-[1.125rem] text-[0.94rem] font-semibold text-white transition-colors hover:bg-accent-strong';
   const disabledActionClassName =
-    'inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-[0.92rem] bg-accent px-[1.125rem] text-[0.94rem] font-semibold text-white/80 opacity-60';
+    'inline-flex min-h-10 cursor-not-allowed items-center justify-center gap-2.5 rounded-[0.92rem] bg-accent px-[1.125rem] text-[0.94rem] font-semibold text-white/80 opacity-60';
+  const showCreateIcon = action?.label === 'Create Task';
 
   return (
     <header className="flex items-start justify-between gap-4 border-b border-line px-4 py-3.5 lg:px-6">
@@ -38,6 +39,7 @@ export function AppShellHeader({ routeContext }: AppShellHeaderProps) {
             onClick={action.onAction}
             className={actionClassName}
           >
+            {showCreateIcon ? <CreateIcon /> : null}
             {action.label}
           </button>
         ) : action?.href ? (
@@ -45,6 +47,7 @@ export function AppShellHeader({ routeContext }: AppShellHeaderProps) {
             href={action.href}
             className={actionClassName}
           >
+            {showCreateIcon ? <CreateIcon /> : null}
             {action.label}
           </Link>
         ) : action ? (
@@ -53,10 +56,20 @@ export function AppShellHeader({ routeContext }: AppShellHeaderProps) {
             disabled
             className={disabledActionClassName}
           >
+            {showCreateIcon ? <CreateIcon /> : null}
             {action.label}
           </button>
         ) : null}
       </div>
     </header>
+  );
+}
+
+function CreateIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2.1">
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
   );
 }

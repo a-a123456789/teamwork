@@ -3,7 +3,6 @@ import {
   type BoardAssigneeFilter,
   type BoardStatusFilter,
 } from '@/lib/board';
-import { ContentPanel } from '@/components/app-shell/page-state';
 
 interface BoardFiltersPanelProps {
   statusFilter: BoardStatusFilter;
@@ -25,13 +24,13 @@ export function BoardFiltersPanel({
   membersUnavailable,
 }: BoardFiltersPanelProps) {
   return (
-    <ContentPanel className="flex w-[226px] shrink-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
-        <h3 className="text-[1.3rem] font-semibold tracking-tight text-foreground">Filters</h3>
+    <aside className="w-full shrink-0 border-b border-line px-[1rem] py-[1rem] xl:w-[12.5rem] xl:border-b-0 xl:border-r">
+      <div className="flex items-center justify-between">
+        <h2 className="text-[1.25rem] font-semibold tracking-tight text-foreground">Filters</h2>
         <FilterFunnelIcon />
       </div>
 
-      <div className="flex flex-col gap-6 px-4 py-4">
+      <div className="mt-[1.25rem] grid grid-cols-1 gap-[1.25rem] sm:grid-cols-2 xl:grid-cols-1">
         <FilterSection
           title="Status"
           options={statusOptions.map((option) => ({
@@ -61,9 +60,10 @@ export function BoardFiltersPanel({
               ? 'Member-specific filters are unavailable until workspace members load.'
               : null
           }
+          listClassName="max-h-[12rem] overflow-y-auto pr-[0.25rem] shell-scrollbar xl:max-h-[16rem]"
         />
       </div>
-    </ContentPanel>
+    </aside>
   );
 }
 
@@ -71,6 +71,7 @@ function FilterSection({
   title,
   options,
   note,
+  listClassName,
 }: {
   title: string;
   options: Array<{
@@ -80,37 +81,34 @@ function FilterSection({
     onSelect: () => void;
   }>;
   note?: string | null;
+  listClassName?: string;
 }) {
   return (
     <section>
       <div className="flex items-center justify-between">
-        <h4 className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted">{title}</h4>
+        <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted">
+          {title}
+        </h3>
         <ChevronIcon />
       </div>
-      <div className="mt-3 flex flex-col gap-0.5">
+
+      <div className={`mt-[0.75rem] space-y-[0.125rem] ${listClassName ?? ''}`}>
         {options.map((option) => (
           <button
             key={option.key}
             type="button"
             onClick={option.onSelect}
-            className={`flex items-center justify-between rounded-[0.9rem] px-2.5 py-2.5 text-left text-[0.92rem] font-medium transition-colors ${
-              option.selected
-                ? 'bg-accent-soft/90 text-foreground'
-                : 'text-foreground hover:bg-surface-muted'
-            }`}
+            className="flex w-full items-center justify-between rounded-[0.625rem] px-[0.625rem] py-[0.5rem] text-left text-[0.875rem] font-medium text-foreground transition-colors hover:bg-surface-muted/70"
           >
-            <span>{option.label}</span>
-            <span
-              className={`inline-flex h-4.5 w-4.5 items-center justify-center rounded-full ${
-                option.selected ? 'text-accent' : 'text-transparent'
-              }`}
-            >
+            <span className="min-w-0 pr-[0.5rem] break-words">{option.label}</span>
+            <span className={option.selected ? 'text-[#34d7cf]' : 'text-transparent'}>
               <CheckIcon />
             </span>
           </button>
         ))}
       </div>
-      {note ? <p className="mt-2.5 text-[0.74rem] leading-5 text-muted">{note}</p> : null}
+
+      {note ? <p className="mt-[0.625rem] text-[0.6875rem] leading-[1.1rem] text-muted">{note}</p> : null}
     </section>
   );
 }
@@ -133,7 +131,13 @@ function toStatusLabel(status: BoardStatusFilter): string {
 
 function FilterFunnelIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.25rem] w-[1.25rem] text-muted"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
       <path d="M4.5 6h15l-5.8 6.5V18l-3.4 1.8v-7.3z" />
     </svg>
   );
@@ -141,15 +145,27 @@ function FilterFunnelIcon() {
 
 function ChevronIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="m8 10 4 4 4-4" />
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1rem] w-[1rem] text-muted"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path d="m7 9 5 5 5-5" />
     </svg>
   );
 }
 
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.1">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1rem] w-[1rem]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.3"
+    >
       <path d="m5 12.5 4.2 4.2L19 7.5" />
     </svg>
   );

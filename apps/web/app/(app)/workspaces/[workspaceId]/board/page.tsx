@@ -112,16 +112,32 @@ export default function WorkspaceBoardPage() {
       {workspaceQuery.status === 'error' ? (
         <PageStatusCard
           title="Workspace unavailable"
-          description="This workspace could not be loaded right now."
+          description={
+            workspaceQuery.error.message
+              ? `This workspace could not be loaded right now. ${workspaceQuery.error.message}`
+              : 'This workspace could not be loaded right now.'
+          }
           tone="danger"
+          actionLabel="Retry board"
+          onAction={() => {
+            window.location.reload();
+          }}
         />
       ) : null}
 
       {tasksQuery.status === 'error' ? (
         <PageStatusCard
           title="Board unavailable"
-          description="Workspace tasks could not be loaded right now."
+          description={
+            tasksQuery.error.message
+              ? `Workspace tasks could not be loaded right now. ${tasksQuery.error.message}`
+              : 'Workspace tasks could not be loaded right now.'
+          }
           tone="danger"
+          actionLabel="Retry board"
+          onAction={() => {
+            window.location.reload();
+          }}
         />
       ) : null}
 
