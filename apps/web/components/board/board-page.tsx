@@ -53,9 +53,9 @@ export function BoardPage({
   const hasAnyVisibleTasks = visibleTasks.length > 0;
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
+    <div className="overflow-hidden rounded-[1.3rem] border border-line bg-surface-strong shadow-[var(--panel-shadow)]">
       <BoardWorkspaceSummary workspace={workspace} />
-      <div className="flex min-w-0 items-start gap-4">
+      <div className="flex min-w-0 flex-col xl:flex-row xl:items-start">
         <BoardFiltersPanel
           statusFilter={statusFilter}
           assigneeFilter={assigneeFilter}
@@ -66,8 +66,8 @@ export function BoardPage({
           membersUnavailable={membersUnavailable}
         />
 
-        <div className="min-w-0 flex-1 overflow-x-auto pb-1">
-          <div className="flex min-w-[980px] gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="grid min-w-0 grid-cols-1 divide-y divide-line md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-3">
             {groupedColumns.map((column) => (
               <BoardColumn
                 key={column.status}
