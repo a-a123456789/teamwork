@@ -25,7 +25,7 @@ export function CalendarLoadingState() {
         {Array.from({ length: 14 }, (_, index) => (
           <div
             key={String(index)}
-            className="min-h-[138px] border-r border-b border-line px-3 py-3 last:border-r-0"
+            className="min-h-[7.5rem] border-r border-b border-line px-3 py-3 last:border-r-0"
           >
             <div className="h-8 w-8 animate-pulse rounded-full bg-black/8" />
             <div className="mt-3.5 h-[2.125rem] w-full animate-pulse rounded-[0.78rem] bg-black/8" />

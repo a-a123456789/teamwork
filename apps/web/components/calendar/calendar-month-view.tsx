@@ -20,19 +20,19 @@ export function CalendarMonthView({
   const weekdayHeaders = getWeekdayHeaders();
 
   return (
-    <div className="overflow-hidden rounded-b-[1.4rem]">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-b-[1.2rem]">
       <div className="grid grid-cols-7 border-b border-line bg-surface-muted">
         {weekdayHeaders.map((header) => (
           <div
             key={header}
-            className="border-r border-line px-3 py-2.5 text-center text-[0.82rem] font-semibold text-muted last:border-r-0"
+            className="border-r border-line px-2.5 py-2 text-center text-[0.78rem] font-semibold text-muted last:border-r-0"
           >
             {header}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7">
+      <div className="grid flex-1 grid-cols-7 grid-rows-6">
         {cells.map((cell) => {
           const visibleTasks = cell.tasks.slice(0, MAX_VISIBLE_TASKS);
           const remainingCount = cell.tasks.length - visibleTasks.length;
@@ -40,13 +40,13 @@ export function CalendarMonthView({
           return (
             <div
               key={cell.date}
-              className={`min-h-[136px] border-r border-b border-line px-2.5 py-2.5 align-top last:border-r-0 ${
+              className={`min-h-0 border-r border-b border-line px-2 py-2 align-top last:border-r-0 ${
                 cell.inCurrentMonth ? 'bg-surface-strong' : 'bg-surface-muted/80'
               }`}
             >
               <div className="flex items-center justify-between">
                 <span
-                  className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[0.84rem] font-semibold ${
+                  className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[0.8rem] font-semibold ${
                     cell.isSelected
                       ? 'bg-accent text-white'
                       : cell.isToday
@@ -60,7 +60,7 @@ export function CalendarMonthView({
                 </span>
               </div>
 
-              <div className="mt-2.5 flex flex-col gap-1.5">
+              <div className="mt-2 flex min-h-0 flex-col gap-1 overflow-hidden">
                 {visibleTasks.map((task) => (
                   <CalendarTaskChip key={task.id} task={task} variant="month" onOpen={onTaskOpen} />
                 ))}
@@ -71,7 +71,7 @@ export function CalendarMonthView({
                     onClick={() => {
                       onShowMore(cell.date);
                     }}
-                    className="text-left text-[0.75rem] font-semibold text-accent transition-colors hover:text-accent-strong"
+                    className="text-left text-[0.72rem] font-semibold text-accent transition-colors hover:text-accent-strong"
                   >
                     +{remainingCount} more
                   </button>

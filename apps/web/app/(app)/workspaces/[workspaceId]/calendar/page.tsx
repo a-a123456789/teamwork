@@ -150,7 +150,7 @@ export default function WorkspaceCalendarPage() {
   }, [handleOpenCreateTaskModal, setActionOverride, workspaceQuery.status]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-4">
+    <div className="mx-auto flex min-h-full w-full max-w-[72rem] flex-col gap-4">
       {workspaceQuery.status === 'loading' || tasksQuery.status === 'loading' ? (
         <CalendarLoadingState />
       ) : null}
@@ -172,7 +172,7 @@ export default function WorkspaceCalendarPage() {
       ) : null}
 
       {workspaceQuery.status === 'success' && tasksQuery.status === 'success' ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {membersNote}
 
           <CalendarPage

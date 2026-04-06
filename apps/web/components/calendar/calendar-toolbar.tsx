@@ -50,21 +50,21 @@ export function CalendarToolbar({
   }, [isFilterMenuOpen]);
 
   return (
-    <div className="flex items-center justify-between gap-5 border-b border-line px-6 py-3.5">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2.5 xl:flex-nowrap">
       <div ref={filterMenuRef} className="relative">
         <button
           type="button"
           onClick={() => {
             setIsFilterMenuOpen((current) => !current);
           }}
-          className={`${getButtonClassName('secondary')} min-h-10 gap-2 px-4 text-[0.92rem]`}
+          className={`${getButtonClassName('secondary')} min-h-[2.375rem] gap-2 px-3.5 text-[0.875rem]`}
         >
           {currentFilterOption.label}
           <ChevronDownIcon />
         </button>
 
         {isFilterMenuOpen ? (
-          <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-[310px] rounded-[1.05rem] border border-line bg-surface-strong p-2.5 shadow-[0_18px_40px_rgba(15,23,20,0.12)]">
+          <div className="absolute left-0 top-[calc(100%+0.5rem)] z-20 w-[18rem] rounded-[1rem] border border-line bg-surface-strong p-2 shadow-[0_1rem_2.25rem_rgba(15,23,20,0.12)]">
             {CALENDAR_FILTER_OPTIONS.map((option) => {
               const isActive = option.value === currentFilter;
 
@@ -76,11 +76,11 @@ export function CalendarToolbar({
                     onFilterChange(option.value);
                     setIsFilterMenuOpen(false);
                   }}
-                  className="flex w-full items-start justify-between gap-4 rounded-[0.9rem] px-3 py-2.5 text-left transition-colors hover:bg-surface-muted"
+                  className="flex w-full items-start justify-between gap-3 rounded-[0.9rem] px-3 py-2 text-left transition-colors hover:bg-surface-muted"
                 >
                   <div className="min-w-0">
-                    <p className="text-[0.95rem] font-semibold text-foreground">{option.label}</p>
-                    <p className="mt-1 text-[0.84rem] leading-5 text-muted">{option.description}</p>
+                    <p className="text-[0.9rem] font-semibold text-foreground">{option.label}</p>
+                    <p className="mt-1 text-[0.8rem] leading-5 text-muted">{option.description}</p>
                   </div>
                   <span className="pt-1 text-accent">{isActive ? <CheckIcon /> : null}</span>
                 </button>
@@ -90,8 +90,8 @@ export function CalendarToolbar({
         ) : null}
       </div>
 
-      <div className="flex items-center gap-3.5">
-        <div className="inline-flex items-center gap-1 rounded-[0.95rem] border border-line bg-surface-muted/80 p-1">
+      <div className="flex flex-wrap items-center gap-2.5 xl:flex-nowrap">
+        <div className="inline-flex items-center gap-1 rounded-[0.9rem] border border-line bg-surface-muted/80 p-[0.1875rem]">
           {(['month', 'week', 'day'] as CalendarView[]).map((view) => {
             const isActive = currentView === view;
 
@@ -102,9 +102,9 @@ export function CalendarToolbar({
                 onClick={() => {
                   onViewChange(view);
                 }}
-                className={`inline-flex min-h-9 items-center rounded-[0.75rem] px-3.5 text-[0.9rem] font-semibold transition-colors ${
+                className={`inline-flex min-h-[2.125rem] items-center rounded-[0.7rem] px-3 text-[0.85rem] font-semibold transition-colors ${
                   isActive
-                    ? 'bg-foreground text-white shadow-[0_6px_16px_rgba(15,23,20,0.16)]'
+                    ? 'bg-foreground text-white shadow-[0_0.375rem_1rem_rgba(15,23,20,0.16)]'
                     : 'text-foreground hover:bg-white/70'
                 }`}
               >
@@ -114,7 +114,7 @@ export function CalendarToolbar({
           })}
         </div>
 
-        <div className="h-7 w-px bg-line" />
+        <div className="h-7 w-[0.0625rem] bg-line" />
 
         <div className="flex items-center gap-2">
           <button
