@@ -11,6 +11,7 @@ import { normalizeEmail } from '@teamwork/validation';
 import type {
   InviteWorkspaceMemberResult,
   PublicWorkspaceInvitationLookup,
+  PublicWorkspaceInvitationSummary,
   PublicWorkspaceInvitationStatus,
   WorkspaceInvitationSummary,
   WorkspaceRole,
@@ -33,6 +34,15 @@ const invitationSummarySelect = {
   acceptedAt: true,
   revokedAt: true,
 } satisfies Prisma.WorkspaceInvitationSelect;
+const publicInvitationSummarySelect = {
+  id: true,
+  workspaceId: true,
+  role: true,
+  expiresAt: true,
+  createdAt: true,
+  acceptedAt: true,
+  revokedAt: true,
+} satisfies Prisma.WorkspaceInvitationSelect;
 
 const workspaceSummarySelect = {
   id: true,
@@ -44,6 +54,12 @@ const workspaceSummarySelect = {
 } satisfies Prisma.WorkspaceSelect;
 const invitationWithWorkspaceSelect = {
   ...invitationSummarySelect,
+  workspace: {
+    select: workspaceSummarySelect,
+  },
+} satisfies Prisma.WorkspaceInvitationSelect;
+const publicInvitationWithWorkspaceSelect = {
+  ...publicInvitationSummarySelect,
   workspace: {
     select: workspaceSummarySelect,
   },
@@ -62,6 +78,9 @@ interface WorkspaceInvitationRepository {
   ): Promise<Array<Prisma.WorkspaceInvitationGetPayload<T>>>;
   findFirst<T extends Prisma.WorkspaceInvitationFindFirstArgs>(
     args: Prisma.SelectSubset<T, Prisma.WorkspaceInvitationFindFirstArgs>,
+  ): Promise<Prisma.WorkspaceInvitationGetPayload<T> | null>;
+  findUnique<T extends Prisma.WorkspaceInvitationFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceInvitationFindUniqueArgs>,
   ): Promise<Prisma.WorkspaceInvitationGetPayload<T> | null>;
   create<T extends Prisma.WorkspaceInvitationCreateArgs>(
     args: Prisma.SelectSubset<T, Prisma.WorkspaceInvitationCreateArgs>,
@@ -145,6 +164,9 @@ export class WorkspaceInvitationsService {
         workspaceId,
         acceptedAt: null,
         revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
       },
       select: invitationSummarySelect,
       orderBy: { createdAt: 'asc' },
@@ -165,6 +187,9 @@ export class WorkspaceInvitationsService {
         email: normalizedEmail,
         acceptedAt: null,
         revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
       },
       select: invitationWithWorkspaceSelect,
       orderBy: { createdAt: 'asc' },
@@ -177,11 +202,11 @@ export class WorkspaceInvitationsService {
   }
 
   async getInvitationByToken(token: string): Promise<PublicWorkspaceInvitationLookup> {
-    const invitation = await toInvitationDatabase(this.prisma).workspaceInvitation.findFirst({
+    const invitation = await toInvitationDatabase(this.prisma).workspaceInvitation.findUnique({
       where: {
         tokenHash: createInvitationTokenHash(token),
       },
-      select: invitationWithWorkspaceSelect,
+      select: publicInvitationWithWorkspaceSelect,
     });
 
     if (!invitation) {
@@ -189,7 +214,7 @@ export class WorkspaceInvitationsService {
     }
 
     return {
-      invitation: this.toSummary(invitation),
+      invitation: this.toPublicSummary(invitation),
       workspace: this.toWorkspaceSummary(invitation.workspace),
       status: this.toPublicStatus(invitation),
     };
@@ -277,6 +302,23 @@ export class WorkspaceInvitationsService {
     };
   }
 
+  private toPublicSummary(
+    invitation: Pick<
+      WorkspaceInvitation,
+      'id' | 'workspaceId' | 'role' | 'expiresAt' | 'createdAt' | 'acceptedAt' | 'revokedAt'
+    >,
+  ): PublicWorkspaceInvitationSummary {
+    return {
+      id: invitation.id,
+      workspaceId: invitation.workspaceId,
+      role: invitation.role,
+      expiresAt: invitation.expiresAt.toISOString(),
+      createdAt: invitation.createdAt.toISOString(),
+      acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
+      revokedAt: invitation.revokedAt?.toISOString() ?? null,
+    };
+  }
+
   private async createInvitation(
     input: {
       workspaceId: string;
@@ -321,6 +363,9 @@ export class WorkspaceInvitationsService {
         email,
         acceptedAt: null,
         revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
       },
       select: { id: true },
     });
@@ -379,13 +424,19 @@ export class WorkspaceInvitationsService {
     lookup: AcceptInvitationLookup,
     tx: Prisma.TransactionClient,
   ): Promise<InvitationSummaryRecord | null> {
-    const where =
-      'token' in lookup
-        ? { tokenHash: createInvitationTokenHash(lookup.token) }
-        : { id: lookup.invitationId };
+    if ('token' in lookup) {
+      return tx.workspaceInvitation.findUnique({
+        where: {
+          tokenHash: createInvitationTokenHash(lookup.token),
+        },
+        select: invitationSummarySelect,
+      });
+    }
 
-    return tx.workspaceInvitation.findFirst({
-      where,
+    return tx.workspaceInvitation.findUnique({
+      where: {
+        id: lookup.invitationId,
+      },
       select: invitationSummarySelect,
     });
   }

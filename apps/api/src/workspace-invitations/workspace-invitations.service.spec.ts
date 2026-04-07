@@ -57,6 +57,7 @@ describe('WorkspaceInvitationsService', () => {
   let prisma: {
     workspaceInvitation: {
       findFirst: jest.Mock;
+      findUnique: jest.Mock;
       findMany: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
@@ -106,6 +107,7 @@ describe('WorkspaceInvitationsService', () => {
     prisma = {
       workspaceInvitation: {
         findFirst: jest.fn(),
+        findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
@@ -322,6 +324,9 @@ describe('WorkspaceInvitationsService', () => {
         email: 'invitee@example.com',
         acceptedAt: null,
         revokedAt: null,
+        expiresAt: {
+          gt: new Date('2026-03-26T00:00:00.000Z'),
+        },
       },
       select: { id: true },
     });
@@ -417,6 +422,29 @@ describe('WorkspaceInvitationsService', () => {
         revokedAt: null,
       },
     ]);
+
+    expect(prisma.workspaceInvitation.findMany).toHaveBeenCalledWith({
+      where: {
+        workspaceId,
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date('2026-03-26T00:00:00.000Z'),
+        },
+      },
+      select: {
+        id: true,
+        workspaceId: true,
+        email: true,
+        role: true,
+        invitedByUserId: true,
+        expiresAt: true,
+        createdAt: true,
+        acceptedAt: true,
+        revokedAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
   });
 
   it('returns expiresAt in revoked invitation summaries', async () => {
@@ -459,7 +487,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('blocks accepting an invitation for another email', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -480,7 +508,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('rejects accepting an invitation that does not exist', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce(null);
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce(null);
 
     await expect(
       service.acceptInvitation(invitationId, {
@@ -491,7 +519,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('rejects accepting an invitation that has already been accepted', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -512,7 +540,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('rejects accepting a revoked invitation', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -534,7 +562,7 @@ describe('WorkspaceInvitationsService', () => {
 
   it('rejects accepting an expired invitation', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-04-03T00:00:00.000Z'));
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -559,7 +587,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('rejects accepting an invitation when the user is already a member', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -589,7 +617,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('accepts an invitation by creating a membership and marking it accepted', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -641,7 +669,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('keeps the legacy invitation-id accept flow on the same internal lookup path', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -674,7 +702,7 @@ describe('WorkspaceInvitationsService', () => {
       email: 'invitee@example.com',
     });
 
-    expect(prisma.workspaceInvitation.findFirst).toHaveBeenCalledWith({
+    expect(prisma.workspaceInvitation.findUnique).toHaveBeenCalledWith({
       where: { id: invitationId },
       select: {
         id: true,
@@ -691,7 +719,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('accept-by-token creates membership and marks invitation accepted', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -724,7 +752,7 @@ describe('WorkspaceInvitationsService', () => {
       email: 'invitee@example.com',
     });
 
-    const findFirstCalls = prisma.workspaceInvitation.findFirst.mock.calls as Array<
+    const findUniqueCalls = prisma.workspaceInvitation.findUnique.mock.calls as Array<
       [
         {
           where: { tokenHash: string };
@@ -742,11 +770,11 @@ describe('WorkspaceInvitationsService', () => {
         },
       ]
     >;
-    const findFirstArgs = findFirstCalls[0]?.[0];
+    const findUniqueArgs = findUniqueCalls[0]?.[0];
 
-    expect(findFirstArgs).toBeDefined();
-    expect(typeof findFirstArgs?.where.tokenHash).toBe('string');
-    expect(findFirstArgs?.select).toEqual({
+    expect(findUniqueArgs).toBeDefined();
+    expect(typeof findUniqueArgs?.where.tokenHash).toBe('string');
+    expect(findUniqueArgs?.select).toEqual({
       id: true,
       workspaceId: true,
       email: true,
@@ -761,7 +789,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('unknown tokens are rejected correctly during acceptance', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce(null);
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce(null);
 
     await expect(
       service.acceptInvitationByToken('missing-token', {
@@ -801,6 +829,9 @@ describe('WorkspaceInvitationsService', () => {
         email: 'invitee@example.com',
         acceptedAt: null,
         revokedAt: null,
+        expiresAt: {
+          gt: new Date('2026-03-26T00:00:00.000Z'),
+        },
       },
       select: {
         id: true,
@@ -850,12 +881,10 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('token lookup returns safe metadata', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
-      email: 'invitee@example.com',
       role: PrismaWorkspaceRole.member,
-      invitedByUserId: 'owner-1',
       expiresAt: new Date('2026-04-10T00:00:00.000Z'),
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
       acceptedAt: null,
@@ -872,16 +901,14 @@ describe('WorkspaceInvitationsService', () => {
 
     const result = await service.getInvitationByToken('plain-token');
 
-    const findFirstCalls = prisma.workspaceInvitation.findFirst.mock.calls as Array<
+    const findUniqueCalls = prisma.workspaceInvitation.findUnique.mock.calls as Array<
       [
         {
           where: { tokenHash: string };
           select: {
             id: true;
             workspaceId: true;
-            email: true;
             role: true;
-            invitedByUserId: true;
             expiresAt: true;
             createdAt: true;
             acceptedAt: true;
@@ -900,16 +927,14 @@ describe('WorkspaceInvitationsService', () => {
         },
       ]
     >;
-    const findFirstArgs = findFirstCalls[0]?.[0];
+    const findUniqueArgs = findUniqueCalls[0]?.[0];
 
-    expect(findFirstArgs).toBeDefined();
-    expect(typeof findFirstArgs?.where.tokenHash).toBe('string');
-    expect(findFirstArgs?.select).toEqual({
+    expect(findUniqueArgs).toBeDefined();
+    expect(typeof findUniqueArgs?.where.tokenHash).toBe('string');
+    expect(findUniqueArgs?.select).toEqual({
       id: true,
       workspaceId: true,
-      email: true,
       role: true,
-      invitedByUserId: true,
       expiresAt: true,
       createdAt: true,
       acceptedAt: true,
@@ -929,9 +954,7 @@ describe('WorkspaceInvitationsService', () => {
       invitation: {
         id: invitationId,
         workspaceId,
-        email: 'invitee@example.com',
         role: 'member',
-        invitedByUserId: 'owner-1',
         expiresAt: '2026-04-10T00:00:00.000Z',
         createdAt: '2026-03-26T00:00:00.000Z',
         acceptedAt: null,
@@ -950,7 +973,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('unknown tokens are rejected correctly during lookup', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce(null);
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce(null);
 
     await expect(service.getInvitationByToken('missing-token')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -959,7 +982,7 @@ describe('WorkspaceInvitationsService', () => {
 
   it('expired, revoked, accepted, and unknown tokens are rejected correctly during lookup', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-04-03T00:00:00.000Z'));
-    prisma.workspaceInvitation.findFirst
+    prisma.workspaceInvitation.findUnique
       .mockResolvedValueOnce({
         id: invitationId,
         workspaceId,
@@ -1034,7 +1057,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('accepted tokens are rejected correctly during acceptance', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -1055,7 +1078,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('revoked tokens are rejected correctly during acceptance', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -1077,7 +1100,7 @@ describe('WorkspaceInvitationsService', () => {
 
   it('expired tokens are rejected correctly during acceptance', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-04-03T00:00:00.000Z'));
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -1102,7 +1125,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('wrong-email acceptance is rejected', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',
@@ -1123,7 +1146,7 @@ describe('WorkspaceInvitationsService', () => {
   });
 
   it('already-member acceptance is rejected', async () => {
-    prisma.workspaceInvitation.findFirst.mockResolvedValueOnce({
+    prisma.workspaceInvitation.findUnique.mockResolvedValueOnce({
       id: invitationId,
       workspaceId,
       email: 'invitee@example.com',

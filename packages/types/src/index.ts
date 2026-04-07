@@ -37,10 +37,20 @@ export interface WorkspaceInvitationSummary {
   revokedAt: string | null;
 }
 
+export interface PublicWorkspaceInvitationSummary {
+  id: ID;
+  workspaceId: ID;
+  role: WorkspaceRole;
+  expiresAt: string;
+  createdAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+}
+
 export type PublicWorkspaceInvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
 
 export interface PublicWorkspaceInvitationLookup {
-  invitation: WorkspaceInvitationSummary;
+  invitation: PublicWorkspaceInvitationSummary;
   workspace: WorkspaceSummary;
   status: PublicWorkspaceInvitationStatus;
 }
