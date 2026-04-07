@@ -1,6 +1,7 @@
 import { Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import type {
   PublicWorkspaceInvitationLookup,
+  PublicWorkspaceShareLinkLookup,
   WorkspaceInvitationSummary,
   WorkspaceMemberDetail,
   WorkspaceSummary,
@@ -22,6 +23,14 @@ export class WorkspaceInvitationsController {
     @Param('token') token: string,
   ): Promise<PublicWorkspaceInvitationLookup> {
     return this.workspaceInvitationsService.getInvitationByToken(token);
+  }
+
+  @Public()
+  @Get('workspace-share-links/token/:token')
+  async getWorkspaceShareLinkByToken(
+    @Param('token') token: string,
+  ): Promise<PublicWorkspaceShareLinkLookup> {
+    return this.workspaceInvitationsService.getWorkspaceShareLinkByToken(token);
   }
 
   @Get('users/me/invitations')
@@ -52,5 +61,13 @@ export class WorkspaceInvitationsController {
     @Param('token') token: string,
   ): Promise<{ membership: WorkspaceMemberDetail }> {
     return this.workspaceInvitationsService.acceptInvitationByToken(token, user);
+  }
+
+  @Post('workspace-share-links/token/:token/accept')
+  async acceptWorkspaceShareLinkByToken(
+    @CurrentUser() user: RequestUser,
+    @Param('token') token: string,
+  ): Promise<{ membership: WorkspaceMemberDetail }> {
+    return this.workspaceInvitationsService.acceptWorkspaceShareLinkByToken(token, user);
   }
 }

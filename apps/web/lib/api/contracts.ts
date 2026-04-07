@@ -3,6 +3,8 @@ import type {
   AuthMeResponse,
   AuthenticatedWorkspace,
   InviteWorkspaceMemberResult,
+  PublicWorkspaceInvitationLookup,
+  PublicWorkspaceShareLinkLookup,
   RegisterResponse,
   TaskListResponse,
   TaskResponse,
@@ -16,6 +18,7 @@ import type {
   WorkspaceMembersResponse,
   WorkspaceMembershipSummary,
   WorkspaceResponse,
+  WorkspaceShareLinkResponse,
   WorkspaceSummary,
 } from '@teamwork/types';
 
@@ -93,6 +96,16 @@ export function parseWorkspaceInvitationResponse(
   };
 }
 
+export function parseWorkspaceShareLinkResponse(
+  value: unknown,
+): WorkspaceShareLinkResponse {
+  const record = readRecord(value);
+
+  return {
+    shareLink: parseWorkspaceShareLinkSummary(record['shareLink']),
+  };
+}
+
 export function parseInviteWorkspaceMemberResult(
   value: unknown,
 ): InviteWorkspaceMemberResult {
@@ -103,6 +116,29 @@ export function parseInviteWorkspaceMemberResult(
     invitation: parseWorkspaceInvitationSummary(record['invitation']),
     token: readString(record['token']),
     inviteUrl: readString(record['inviteUrl']),
+  };
+}
+
+export function parsePublicWorkspaceInvitationLookup(
+  value: unknown,
+): PublicWorkspaceInvitationLookup {
+  const record = readRecord(value);
+
+  return {
+    invitation: parsePublicWorkspaceInvitationSummary(record['invitation']),
+    workspace: parseWorkspaceSummary(record['workspace']),
+    status: readPublicInvitationStatus(record['status']),
+  };
+}
+
+export function parsePublicWorkspaceShareLinkLookup(
+  value: unknown,
+): PublicWorkspaceShareLinkLookup {
+  const record = readRecord(value);
+
+  return {
+    shareLink: parsePublicWorkspaceShareLinkSummary(record['shareLink']),
+    workspace: parseWorkspaceSummary(record['workspace']),
   };
 }
 
@@ -200,6 +236,52 @@ function parseWorkspaceInvitationSummary(value: unknown): WorkspaceInvitationSum
     createdAt: readString(record['createdAt']),
     acceptedAt: readNullableString(record['acceptedAt']),
     revokedAt: readNullableString(record['revokedAt']),
+  };
+}
+
+function parsePublicWorkspaceInvitationSummary(
+  value: unknown,
+): PublicWorkspaceInvitationLookup['invitation'] {
+  const record = readRecord(value);
+
+  return {
+    id: readString(record['id']),
+    workspaceId: readString(record['workspaceId']),
+    role: readWorkspaceRole(record['role']),
+    expiresAt: readString(record['expiresAt']),
+    createdAt: readString(record['createdAt']),
+    acceptedAt: readNullableString(record['acceptedAt']),
+    revokedAt: readNullableString(record['revokedAt']),
+  };
+}
+
+function parseWorkspaceShareLinkSummary(
+  value: unknown,
+): WorkspaceShareLinkResponse['shareLink'] {
+  const record = readRecord(value);
+
+  return {
+    id: readString(record['id']),
+    workspaceId: readString(record['workspaceId']),
+    role: readWorkspaceRole(record['role']),
+    createdByUserId: readString(record['createdByUserId']),
+    createdAt: readString(record['createdAt']),
+    updatedAt: readString(record['updatedAt']),
+    url: readString(record['url']),
+  };
+}
+
+function parsePublicWorkspaceShareLinkSummary(
+  value: unknown,
+): PublicWorkspaceShareLinkLookup['shareLink'] {
+  const record = readRecord(value);
+
+  return {
+    id: readString(record['id']),
+    workspaceId: readString(record['workspaceId']),
+    role: readWorkspaceRole(record['role']),
+    createdAt: readString(record['createdAt']),
+    updatedAt: readString(record['updatedAt']),
   };
 }
 
@@ -325,4 +407,14 @@ function readInviteResultKind(
   }
 
   throw new Error('Expected invite result kind.');
+}
+
+function readPublicInvitationStatus(
+  value: unknown,
+): PublicWorkspaceInvitationLookup['status'] {
+  if (value === 'pending' || value === 'accepted' || value === 'revoked' || value === 'expired') {
+    return value;
+  }
+
+  throw new Error('Expected public invitation status.');
 }

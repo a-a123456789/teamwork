@@ -67,6 +67,11 @@ describe('WorkspaceInvitationsService', () => {
     workspaceMembership: {
       findUnique: jest.Mock;
     };
+    workspaceShareLink: {
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
   let membershipsService: {
@@ -117,6 +122,11 @@ describe('WorkspaceInvitationsService', () => {
       },
       workspaceMembership: {
         findUnique: jest.fn(),
+      },
+      workspaceShareLink: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
       },
       $transaction: jest.fn(runInTransaction),
     };
@@ -416,8 +426,10 @@ describe('WorkspaceInvitationsService', () => {
 
       const createArgs = getCreateInvitationArgs(prisma.workspaceInvitation.create);
       expect(createArgs).toBeDefined();
-      expect(createArgs?.data.expiresAt).toEqual(new Date('2026-05-10T00:00:00.000Z'));
-      expect(createArgs?.data.expiresAt.getTime() - Date.now()).toBe(
+      const expiresAt = createArgs?.data.expiresAt;
+      expect(expiresAt).toEqual(new Date('2026-05-10T00:00:00.000Z'));
+      expect(expiresAt?.getTime()).toBeDefined();
+      expect((expiresAt?.getTime() ?? 0) - Date.now()).toBe(
         45 * 24 * 60 * 60 * 1000,
       );
       expect(createArgs?.select).toEqual({
@@ -434,6 +446,144 @@ describe('WorkspaceInvitationsService', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('creates and returns a persistent workspace share link', async () => {
+    prisma.workspaceShareLink.findUnique.mockResolvedValueOnce(null);
+    prisma.workspaceShareLink.create.mockResolvedValueOnce({
+      id: 'share-link-1',
+      workspaceId,
+      token: 'share-token',
+      role: PrismaWorkspaceRole.member,
+      createdByUserId: 'owner-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+
+    const result = await service.getWorkspaceShareLink(workspaceId, 'owner-1');
+
+    expect(result.shareLink).toMatchObject({
+      id: 'share-link-1',
+      workspaceId,
+      role: 'member',
+      createdByUserId: 'owner-1',
+      url: 'http://localhost:3000/join/share-token',
+    });
+  });
+
+  it('updates a workspace share link role', async () => {
+    prisma.workspaceShareLink.findUnique.mockResolvedValueOnce({
+      id: 'share-link-1',
+      workspaceId,
+      token: 'share-token',
+      role: PrismaWorkspaceRole.member,
+      createdByUserId: 'owner-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    prisma.workspaceShareLink.update.mockResolvedValueOnce({
+      id: 'share-link-1',
+      workspaceId,
+      token: 'share-token',
+      role: PrismaWorkspaceRole.owner,
+      createdByUserId: 'owner-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-27T00:00:00.000Z'),
+    });
+
+    const result = await service.updateWorkspaceShareLink(workspaceId, 'owner', 'owner-1');
+
+    expect(result.shareLink.role).toBe('owner');
+  });
+
+  it('regenerates an existing workspace share link token', async () => {
+    prisma.workspaceShareLink.findUnique.mockResolvedValueOnce({
+      id: 'share-link-1',
+      workspaceId,
+      token: 'old-token',
+      role: PrismaWorkspaceRole.member,
+      createdByUserId: 'owner-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    prisma.workspaceShareLink.update.mockImplementationOnce(async ({ data }) => ({
+      id: 'share-link-1',
+      workspaceId,
+      token: data.token,
+      role: PrismaWorkspaceRole.member,
+      createdByUserId: 'owner-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-27T00:00:00.000Z'),
+    }));
+
+    const result = await service.regenerateWorkspaceShareLink(workspaceId, 'owner-1');
+
+    expect(result.shareLink.url).toContain('/join/');
+    expect(result.shareLink.url).not.toContain('old-token');
+  });
+
+  it('looks up a workspace share link by token', async () => {
+    prisma.workspaceShareLink.findUnique.mockResolvedValueOnce({
+      id: 'share-link-1',
+      workspaceId,
+      token: 'share-token',
+      role: PrismaWorkspaceRole.member,
+      createdByUserId: 'owner-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+      workspace: {
+        id: workspaceId,
+        name: 'Workspace',
+        slug: 'workspace',
+        createdByUserId: 'owner-1',
+        createdAt: new Date('2026-03-26T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+      },
+    });
+
+    const result = await service.getWorkspaceShareLinkByToken('share-token');
+
+    expect(result.workspace).toMatchObject({ id: workspaceId, name: 'Workspace' });
+    expect(result.shareLink.role).toBe('member');
+  });
+
+  it('accepts a workspace share link by creating a membership', async () => {
+    prisma.workspaceShareLink.findUnique.mockResolvedValueOnce({
+      id: 'share-link-1',
+      workspaceId,
+      token: 'share-token',
+      role: PrismaWorkspaceRole.member,
+      createdByUserId: 'owner-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    prisma.workspaceMembership.findUnique.mockResolvedValueOnce(null);
+    membershipsService.createMembership.mockResolvedValueOnce({
+      id: 'membership-1',
+      workspaceId,
+      userId: 'user-2',
+      role: PrismaWorkspaceRole.member,
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+    usersService.getByIdOrThrow.mockResolvedValueOnce({
+      id: 'user-2',
+      email: 'invitee@example.com',
+      displayName: 'Invitee',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
+
+    const result = await service.acceptWorkspaceShareLinkByToken('share-token', {
+      id: 'user-2',
+      email: 'invitee@example.com',
+    });
+
+    expect(result.membership).toMatchObject({
+      id: 'membership-1',
+      workspaceId,
+      userId: 'user-2',
+      role: 'member',
+    });
   });
 
   it('returns expiresAt in pending workspace invitation summaries', async () => {

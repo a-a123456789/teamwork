@@ -5,19 +5,26 @@ import type {
   InviteWorkspaceMemberResult,
   WorkspaceInvitationSummary,
   WorkspaceRole,
+  WorkspaceShareLinkSummary,
 } from '@teamwork/types';
-import { ApiError, revokeWorkspaceInvitation } from '@/lib/api/client';
+import {
+  ApiError,
+  regenerateWorkspaceShareLink,
+  revokeWorkspaceInvitation,
+  updateWorkspaceShareLink,
+} from '@/lib/api/client';
 import { InviteMemberModal } from '@/components/invitations/invite-member-modal';
 import {
   ContentPanel,
   StatusBadge,
 } from '@/components/app-shell/page-state';
 import { AppButton, getIconButtonClassName } from '@/components/ui/button';
-import { FormMessage } from '@/components/ui/form-controls';
+import { FormMessage, getTextControlClassName } from '@/components/ui/form-controls';
 
 interface InvitationsPageProps {
   workspaceId: string;
   invitations: WorkspaceInvitationSummary[];
+  workspaceShareLink: WorkspaceShareLinkSummary | null;
   currentUserRole: WorkspaceRole | null;
   accessToken: string | null;
 }
@@ -27,6 +34,7 @@ type RowState = Partial<Record<string, { isRevoking: boolean; errorMessage: stri
 export function InvitationsPage({
   workspaceId,
   invitations,
+  workspaceShareLink,
   currentUserRole,
   accessToken,
 }: InvitationsPageProps) {
@@ -35,6 +43,11 @@ export function InvitationsPage({
   const [rowState, setRowState] = useState<RowState>({});
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [successResult, setSuccessResult] = useState<InviteWorkspaceMemberResult | null>(null);
+  const [shareLink, setShareLink] = useState<WorkspaceShareLinkSummary | null>(workspaceShareLink);
+  const [shareLinkErrorMessage, setShareLinkErrorMessage] = useState<string | null>(null);
+  const [isUpdatingShareLinkRole, setIsUpdatingShareLinkRole] = useState(false);
+  const [isRegeneratingShareLink, setIsRegeneratingShareLink] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const isOwner = currentUserRole === 'owner';
 
   const items = useMemo(() => {
@@ -110,9 +123,70 @@ export function InvitationsPage({
     [accessToken, isOwner, workspaceId],
   );
 
+  const handleCopyInviteLink = useCallback(async () => {
+    if (!shareLink?.url) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareLink.url);
+      setCopyState('copied');
+    } catch {
+      setCopyState('error');
+    }
+  }, [shareLink]);
+
+  const handleShareLinkRoleChange = useCallback(
+    async (role: WorkspaceRole) => {
+      if (!accessToken || !isOwner || !shareLink) {
+        return;
+      }
+
+      setIsUpdatingShareLinkRole(true);
+      setShareLinkErrorMessage(null);
+
+      try {
+        const result = await updateWorkspaceShareLink(workspaceId, accessToken, role);
+        setShareLink(result.shareLink);
+      } catch (error) {
+        setShareLinkErrorMessage(
+          error instanceof ApiError || error instanceof Error
+            ? error.message
+            : 'Workspace share link could not be updated.',
+        );
+      } finally {
+        setIsUpdatingShareLinkRole(false);
+      }
+    },
+    [accessToken, isOwner, shareLink, workspaceId],
+  );
+
+  const handleRegenerateShareLink = useCallback(async () => {
+    if (!accessToken || !isOwner) {
+      return;
+    }
+
+    setIsRegeneratingShareLink(true);
+    setShareLinkErrorMessage(null);
+    setCopyState('idle');
+
+    try {
+      const result = await regenerateWorkspaceShareLink(workspaceId, accessToken);
+      setShareLink(result.shareLink);
+    } catch (error) {
+      setShareLinkErrorMessage(
+        error instanceof ApiError || error instanceof Error
+          ? error.message
+          : 'Workspace share link could not be regenerated.',
+      );
+    } finally {
+      setIsRegeneratingShareLink(false);
+    }
+  }, [accessToken, isOwner, workspaceId]);
+
   return (
     <>
-      <section className="flex items-start justify-between gap-5">
+      <section>
         <div>
           <h2 className="text-[1.82rem] font-semibold tracking-tight text-foreground">
             Invitations
@@ -121,18 +195,6 @@ export function InvitationsPage({
             Invite new members to your workspace
           </p>
         </div>
-
-        {isOwner ? (
-          <AppButton
-            type="button"
-            onClick={() => {
-              setIsInviteModalOpen(true);
-            }}
-            className="min-h-10 px-5 text-[0.95rem]"
-          >
-            Invite Member
-          </AppButton>
-        ) : null}
       </section>
 
       {successResult ? (
@@ -142,18 +204,128 @@ export function InvitationsPage({
         />
       ) : null}
 
-      {successResult ? (
-        <section className="rounded-[calc(var(--radius-control)+0.3rem)] border border-line bg-[var(--color-info-soft)] px-6 py-5">
-          <p className="text-[0.88rem] font-semibold text-foreground">
-            Share this invitation link:
-          </p>
-          <a
-            href={successResult.inviteUrl}
-            className="mt-2 block break-all text-[0.88rem] font-medium leading-6 text-accent underline decoration-transparent underline-offset-4 transition-colors hover:decoration-current"
-          >
-            {successResult.inviteUrl}
-          </a>
-        </section>
+      {isOwner ? (
+        <ContentPanel>
+          <div className="flex items-start justify-between gap-6 px-7 py-6">
+            <div className="min-w-0">
+              <h3 className="text-[1.18rem] font-semibold tracking-tight text-foreground">
+                Invite Member
+              </h3>
+              <p className="mt-2 max-w-2xl text-[0.92rem] leading-6 text-muted">
+                Invite teammates by email or use the workspace share link available below.
+              </p>
+            </div>
+
+            <AppButton
+              type="button"
+              onClick={() => {
+                setIsInviteModalOpen(true);
+                setCopyState('idle');
+              }}
+              className="shrink-0"
+            >
+              Invite Member
+            </AppButton>
+          </div>
+
+          <div className="border-t border-line bg-surface-muted/45 px-7 py-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <p className="text-[0.95rem] font-semibold text-foreground">Invite by link</p>
+                <p className="mt-1 text-[0.86rem] leading-6 text-muted">
+                  Each workspace has a reusable share link. Anyone with access to this link can
+                  join with the role selected here.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {shareLink ? (
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    size="compact"
+                    onClick={() => {
+                      void handleRegenerateShareLink();
+                    }}
+                    disabled={isRegeneratingShareLink || isUpdatingShareLinkRole}
+                  >
+                    {isRegeneratingShareLink ? 'Regenerating...' : 'Regenerate'}
+                  </AppButton>
+                ) : null}
+                {shareLink ? (
+                  <AppButton
+                    type="button"
+                    variant="secondary"
+                    size="compact"
+                    onClick={() => {
+                      void handleCopyInviteLink();
+                    }}
+                    disabled={isRegeneratingShareLink || isUpdatingShareLinkRole}
+                    className="shrink-0"
+                  >
+                    Copy Link
+                  </AppButton>
+                ) : null}
+              </div>
+            </div>
+
+            {shareLink ? (
+              <>
+                <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                  <label className="max-w-[220px]">
+                    <span className="text-[0.82rem] font-semibold uppercase tracking-[0.18em] text-muted">
+                      Access Role
+                    </span>
+                    <select
+                      value={shareLink.role}
+                      disabled={isUpdatingShareLinkRole || isRegeneratingShareLink}
+                      onChange={(event) => {
+                        const nextRole = readWorkspaceRole(event.target.value);
+
+                        if (nextRole && nextRole !== shareLink.role) {
+                          void handleShareLinkRoleChange(nextRole);
+                        }
+                      }}
+                      className={`${getTextControlClassName(false)} mt-2`}
+                    >
+                      <option value="member">Member</option>
+                      <option value="owner">Owner</option>
+                    </select>
+                  </label>
+                </div>
+
+                <a
+                  href={shareLink.url}
+                  className="mt-3 block break-all text-[0.9rem] font-medium leading-6 text-accent underline decoration-transparent underline-offset-4 transition-colors hover:decoration-current"
+                >
+                  {shareLink.url}
+                </a>
+                <p className="mt-2 text-[0.82rem] leading-5 text-muted">
+                  This workspace link stays available until you regenerate it.
+                </p>
+                {copyState === 'copied' ? (
+                  <p className="mt-2 text-[0.82rem] leading-5 text-foreground">
+                    Workspace link copied.
+                  </p>
+                ) : null}
+                {copyState === 'error' ? (
+                  <p className="mt-2 text-[0.82rem] leading-5 text-danger">
+                    Workspace link could not be copied automatically.
+                  </p>
+                ) : null}
+                {shareLinkErrorMessage ? (
+                  <p className="mt-2 text-[0.82rem] leading-5 text-danger">
+                    {shareLinkErrorMessage}
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <div className="mt-3 rounded-[calc(var(--radius-control)+0.15rem)] border border-dashed border-line px-4 py-3 text-[0.85rem] leading-6 text-muted">
+                Workspace share link unavailable right now.
+              </div>
+            )}
+          </div>
+        </ContentPanel>
       ) : null}
 
       <ContentPanel>
@@ -193,6 +365,7 @@ export function InvitationsPage({
         }}
         onCreated={(result) => {
           setSuccessResult(result);
+          setCopyState('idle');
           setRemovedInvitationIds((current) => {
             if (!current[result.invitation.id]) {
               return current;
@@ -301,6 +474,14 @@ const InvitationRow = memo(function InvitationRow({
     </div>
   );
 });
+
+function readWorkspaceRole(value: string): WorkspaceRole | null {
+  if (value === 'owner' || value === 'member') {
+    return value;
+  }
+
+  return null;
+}
 
 function InviteIcon() {
   return (

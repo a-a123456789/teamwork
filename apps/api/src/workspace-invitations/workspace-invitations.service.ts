@@ -6,15 +6,18 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'node:crypto';
-import { Prisma, type WorkspaceInvitation } from '@prisma/client';
+import { Prisma, type WorkspaceInvitation, type WorkspaceShareLink } from '@prisma/client';
 import { normalizeEmail } from '@teamwork/validation';
 import type {
   InviteWorkspaceMemberResult,
   PublicWorkspaceInvitationLookup,
   PublicWorkspaceInvitationSummary,
   PublicWorkspaceInvitationStatus,
+  PublicWorkspaceShareLinkLookup,
+  PublicWorkspaceShareLinkSummary,
   WorkspaceInvitationSummary,
   WorkspaceRole,
+  WorkspaceShareLinkSummary,
   WorkspaceSummary,
 } from '@teamwork/types';
 import type { RequestUser } from '../common/interfaces/request-user.interface';
@@ -64,9 +67,27 @@ const publicInvitationWithWorkspaceSelect = {
     select: workspaceSummarySelect,
   },
 } satisfies Prisma.WorkspaceInvitationSelect;
+const workspaceShareLinkSummarySelect = {
+  id: true,
+  workspaceId: true,
+  token: true,
+  role: true,
+  createdByUserId: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.WorkspaceShareLinkSelect;
+const workspaceShareLinkWithWorkspaceSelect = {
+  ...workspaceShareLinkSummarySelect,
+  workspace: {
+    select: workspaceSummarySelect,
+  },
+} satisfies Prisma.WorkspaceShareLinkSelect;
 
 type InvitationSummaryRecord = Prisma.WorkspaceInvitationGetPayload<{
   select: typeof invitationSummarySelect;
+}>;
+type WorkspaceShareLinkSummaryRecord = Prisma.WorkspaceShareLinkGetPayload<{
+  select: typeof workspaceShareLinkSummarySelect;
 }>;
 type WorkspaceSummaryRecord = Prisma.WorkspaceGetPayload<{
   select: typeof workspaceSummarySelect;
@@ -99,9 +120,22 @@ interface WorkspaceMembershipRepository {
   ): Promise<Prisma.WorkspaceMembershipGetPayload<T> | null>;
 }
 
+interface WorkspaceShareLinkRepository {
+  findUnique<T extends Prisma.WorkspaceShareLinkFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceShareLinkFindUniqueArgs>,
+  ): Promise<Prisma.WorkspaceShareLinkGetPayload<T> | null>;
+  create<T extends Prisma.WorkspaceShareLinkCreateArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceShareLinkCreateArgs>,
+  ): Promise<Prisma.WorkspaceShareLinkGetPayload<T>>;
+  update<T extends Prisma.WorkspaceShareLinkUpdateArgs>(
+    args: Prisma.SelectSubset<T, Prisma.WorkspaceShareLinkUpdateArgs>,
+  ): Promise<Prisma.WorkspaceShareLinkGetPayload<T>>;
+}
+
 interface InvitationDatabase {
   workspaceInvitation: WorkspaceInvitationRepository;
   workspaceMembership: WorkspaceMembershipRepository;
+  workspaceShareLink: WorkspaceShareLinkRepository;
 }
 
 type AcceptInvitationLookup =
@@ -118,6 +152,7 @@ function toInvitationDatabase(db: Prisma.TransactionClient | PrismaService): Inv
   return {
     workspaceInvitation: db.workspaceInvitation,
     workspaceMembership: db.workspaceMembership,
+    workspaceShareLink: db.workspaceShareLink,
   };
 }
 
@@ -256,6 +291,66 @@ export class WorkspaceInvitationsService {
     };
   }
 
+  async getWorkspaceShareLink(
+    workspaceId: string,
+    createdByUserId: string,
+  ): Promise<{ shareLink: WorkspaceShareLinkSummary }> {
+    return this.prisma.$transaction(async (tx) => {
+      const shareLink = await this.getOrCreateWorkspaceShareLink(
+        workspaceId,
+        createdByUserId,
+        toInvitationDatabase(tx),
+      );
+
+      return {
+        shareLink: this.toWorkspaceShareLinkSummary(shareLink),
+      };
+    });
+  }
+
+  async updateWorkspaceShareLink(
+    workspaceId: string,
+    role: WorkspaceRole,
+    createdByUserId: string,
+  ): Promise<{ shareLink: WorkspaceShareLinkSummary }> {
+    return this.prisma.$transaction(async (tx) => {
+      const db = toInvitationDatabase(tx);
+      const shareLink = await this.getOrCreateWorkspaceShareLink(workspaceId, createdByUserId, db);
+      const updatedShareLink = await db.workspaceShareLink.update({
+        where: { id: shareLink.id },
+        data: { role },
+        select: workspaceShareLinkSummarySelect,
+      });
+
+      return {
+        shareLink: this.toWorkspaceShareLinkSummary(updatedShareLink),
+      };
+    });
+  }
+
+  async regenerateWorkspaceShareLink(
+    workspaceId: string,
+    createdByUserId: string,
+  ): Promise<{ shareLink: WorkspaceShareLinkSummary }> {
+    return this.prisma.$transaction(async (tx) => {
+      const db = toInvitationDatabase(tx);
+      const shareLink = await this.getOrCreateWorkspaceShareLink(workspaceId, createdByUserId, db);
+      const token = createInvitationToken();
+      const updatedShareLink = await db.workspaceShareLink.update({
+        where: { id: shareLink.id },
+        data: {
+          token,
+          createdByUserId,
+        },
+        select: workspaceShareLinkSummarySelect,
+      });
+
+      return {
+        shareLink: this.toWorkspaceShareLinkSummary(updatedShareLink),
+      };
+    });
+  }
+
   async acceptInvitation(
     invitationId: string,
     user: Pick<RequestUser, 'id' | 'email'>,
@@ -270,6 +365,42 @@ export class WorkspaceInvitationsService {
     return this.acceptInvitationWithLookup({ token }, user);
   }
 
+  async getWorkspaceShareLinkByToken(token: string): Promise<PublicWorkspaceShareLinkLookup> {
+    const shareLink = await toInvitationDatabase(this.prisma).workspaceShareLink.findUnique({
+      where: {
+        token,
+      },
+      select: workspaceShareLinkWithWorkspaceSelect,
+    });
+
+    if (!shareLink) {
+      throw new NotFoundException('Workspace share link not found.');
+    }
+
+    return {
+      shareLink: this.toPublicWorkspaceShareLinkSummary(shareLink),
+      workspace: this.toWorkspaceSummary(shareLink.workspace),
+    };
+  }
+
+  async acceptWorkspaceShareLinkByToken(
+    token: string,
+    user: Pick<RequestUser, 'id' | 'email'>,
+  ): Promise<{ membership: ReturnType<MembershipsService['toDetail']> }> {
+    const shareLink = await toInvitationDatabase(this.prisma).workspaceShareLink.findUnique({
+      where: {
+        token,
+      },
+      select: workspaceShareLinkSummarySelect,
+    });
+
+    if (!shareLink) {
+      throw new NotFoundException('Workspace share link not found.');
+    }
+
+    return this.acceptWorkspaceShareLink(shareLink, user);
+  }
+
   private async acceptInvitationWithLookup(
     lookup: AcceptInvitationLookup,
     user: Pick<RequestUser, 'id' | 'email'>,
@@ -278,6 +409,41 @@ export class WorkspaceInvitationsService {
       const invitation = await this.findInvitationForAcceptance(lookup, tx);
 
       return this.acceptExistingInvitation(invitation, user, tx);
+    });
+  }
+
+  private async acceptWorkspaceShareLink(
+    shareLink: WorkspaceShareLinkSummaryRecord,
+    user: Pick<RequestUser, 'id' | 'email'>,
+  ): Promise<{ membership: ReturnType<MembershipsService['toDetail']> }> {
+    return this.prisma.$transaction(async (tx) => {
+      const existingMembership = await tx.workspaceMembership.findUnique({
+        where: {
+          workspaceId_userId: {
+            workspaceId: shareLink.workspaceId,
+            userId: user.id,
+          },
+        },
+      });
+
+      if (existingMembership) {
+        throw new ConflictException('You are already a member of this workspace.');
+      }
+
+      const createdMembership = await this.membershipsService.createMembership(
+        {
+          workspaceId: shareLink.workspaceId,
+          userId: user.id,
+          role: shareLink.role,
+        },
+        tx,
+      );
+
+      const currentUser = await this.usersService.getByIdOrThrow(user.id, tx);
+
+      return {
+        membership: this.membershipsService.toDetail(createdMembership, currentUser),
+      };
     });
   }
 
@@ -325,6 +491,38 @@ export class WorkspaceInvitationsService {
     };
   }
 
+  private toWorkspaceShareLinkSummary(
+    shareLink: Pick<
+      WorkspaceShareLink,
+      'id' | 'workspaceId' | 'token' | 'role' | 'createdByUserId' | 'createdAt' | 'updatedAt'
+    >,
+  ): WorkspaceShareLinkSummary {
+    return {
+      id: shareLink.id,
+      workspaceId: shareLink.workspaceId,
+      role: shareLink.role,
+      createdByUserId: shareLink.createdByUserId,
+      createdAt: shareLink.createdAt.toISOString(),
+      updatedAt: shareLink.updatedAt.toISOString(),
+      url: this.buildWorkspaceShareUrl(shareLink.token),
+    };
+  }
+
+  private toPublicWorkspaceShareLinkSummary(
+    shareLink: Pick<
+      WorkspaceShareLink,
+      'id' | 'workspaceId' | 'role' | 'createdAt' | 'updatedAt'
+    >,
+  ): PublicWorkspaceShareLinkSummary {
+    return {
+      id: shareLink.id,
+      workspaceId: shareLink.workspaceId,
+      role: shareLink.role,
+      createdAt: shareLink.createdAt.toISOString(),
+      updatedAt: shareLink.updatedAt.toISOString(),
+    };
+  }
+
   private async createInvitation(
     input: {
       workspaceId: string;
@@ -352,6 +550,50 @@ export class WorkspaceInvitationsService {
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         throw new ConflictException('There is already a pending invitation for this email.');
+      }
+
+      throw error;
+    }
+  }
+
+  private async getOrCreateWorkspaceShareLink(
+    workspaceId: string,
+    createdByUserId: string,
+    db: InvitationDatabase,
+  ): Promise<WorkspaceShareLinkSummaryRecord> {
+    const existingShareLink = await db.workspaceShareLink.findUnique({
+      where: {
+        workspaceId,
+      },
+      select: workspaceShareLinkSummarySelect,
+    });
+
+    if (existingShareLink) {
+      return existingShareLink;
+    }
+
+    const token = createInvitationToken();
+
+    try {
+      return await db.workspaceShareLink.create({
+        data: {
+          workspaceId,
+          token,
+          role: 'member',
+          createdByUserId,
+        },
+        select: workspaceShareLinkSummarySelect,
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        const shareLink = await db.workspaceShareLink.findUnique({
+          where: { workspaceId },
+          select: workspaceShareLinkSummarySelect,
+        });
+
+        if (shareLink) {
+          return shareLink;
+        }
       }
 
       throw error;
@@ -422,6 +664,15 @@ export class WorkspaceInvitationsService {
       'http://localhost:3000';
 
     return new URL(`/invite/${encodeURIComponent(token)}`, inviteBaseUrl).toString();
+  }
+
+  private buildWorkspaceShareUrl(token: string): string {
+    const inviteBaseUrl =
+      this.configService.get<string>('INVITE_BASE_URL') ??
+      this.configService.get<string>('APP_URL') ??
+      'http://localhost:3000';
+
+    return new URL(`/join/${encodeURIComponent(token)}`, inviteBaseUrl).toString();
   }
 
   private createInvitationExpiresAt(from = new Date()): Date {

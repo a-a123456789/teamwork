@@ -26,8 +26,11 @@ describe('WorkspacesController authorization metadata', () => {
 
   it.each([
     ['listInvitations'],
+    ['getWorkspaceShareLink'],
     ['addMember'],
     ['updateMemberRole'],
+    ['updateWorkspaceShareLink'],
+    ['regenerateWorkspaceShareLink'],
     ['revokeInvitation'],
   ])('keeps %s restricted to workspace owners', (methodName) => {
     const handler = controllerPrototype[methodName as keyof WorkspacesController];

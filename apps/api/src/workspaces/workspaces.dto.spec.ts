@@ -2,6 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { AddWorkspaceMemberDto } from './dto/add-workspace-member.dto';
 import { UpdateWorkspaceMemberDto } from './dto/update-workspace-member.dto';
+import { UpdateWorkspaceShareLinkDto } from './dto/update-workspace-share-link.dto';
 
 describe('Workspace member DTOs', () => {
   it('accepts only owner and member when inviting a workspace member', async () => {
@@ -31,6 +32,18 @@ describe('Workspace member DTOs', () => {
     const ownerDto = plainToInstance(UpdateWorkspaceMemberDto, { role: 'owner' });
     const memberDto = plainToInstance(UpdateWorkspaceMemberDto, { role: 'member' });
     const invalidDto = plainToInstance(UpdateWorkspaceMemberDto, { role: 'viewer' });
+
+    await expect(validate(ownerDto)).resolves.toHaveLength(0);
+    await expect(validate(memberDto)).resolves.toHaveLength(0);
+    await expect(validate(invalidDto)).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ property: 'role' })]),
+    );
+  });
+
+  it('accepts only owner and member when updating a workspace share link role', async () => {
+    const ownerDto = plainToInstance(UpdateWorkspaceShareLinkDto, { role: 'owner' });
+    const memberDto = plainToInstance(UpdateWorkspaceShareLinkDto, { role: 'member' });
+    const invalidDto = plainToInstance(UpdateWorkspaceShareLinkDto, { role: 'viewer' });
 
     await expect(validate(ownerDto)).resolves.toHaveLength(0);
     await expect(validate(memberDto)).resolves.toHaveLength(0);

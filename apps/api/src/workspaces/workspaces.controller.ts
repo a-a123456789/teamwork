@@ -20,6 +20,7 @@ import { WorkspaceInvitationsService } from '../workspace-invitations/workspace-
 import { AddWorkspaceMemberDto } from './dto/add-workspace-member.dto';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceMemberDto } from './dto/update-workspace-member.dto';
+import { UpdateWorkspaceShareLinkDto } from './dto/update-workspace-share-link.dto';
 import { WorkspacesService } from './workspaces.service';
 
 @Controller('workspaces')
@@ -73,6 +74,16 @@ export class WorkspacesController {
     };
   }
 
+  @Get(':workspaceId/share-link')
+  @UseGuards(WorkspaceMemberGuard, WorkspaceRoleGuard)
+  @WorkspaceRoles('owner')
+  async getWorkspaceShareLink(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+  ) {
+    return this.workspaceInvitationsService.getWorkspaceShareLink(workspaceId, user.id);
+  }
+
   @Post(':workspaceId/members')
   @UseGuards(WorkspaceMemberGuard, WorkspaceRoleGuard)
   @WorkspaceRoles('owner')
@@ -100,6 +111,31 @@ export class WorkspacesController {
     return {
       membership: await this.membershipsService.updateMemberRole(workspaceId, userId, dto.role),
     };
+  }
+
+  @Patch(':workspaceId/share-link')
+  @UseGuards(WorkspaceMemberGuard, WorkspaceRoleGuard)
+  @WorkspaceRoles('owner')
+  async updateWorkspaceShareLink(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Body() dto: UpdateWorkspaceShareLinkDto,
+  ) {
+    return this.workspaceInvitationsService.updateWorkspaceShareLink(
+      workspaceId,
+      dto.role,
+      user.id,
+    );
+  }
+
+  @Post(':workspaceId/share-link/regenerate')
+  @UseGuards(WorkspaceMemberGuard, WorkspaceRoleGuard)
+  @WorkspaceRoles('owner')
+  async regenerateWorkspaceShareLink(
+    @CurrentUser() user: RequestUser,
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+  ) {
+    return this.workspaceInvitationsService.regenerateWorkspaceShareLink(workspaceId, user.id);
   }
 
   @Delete(':workspaceId/members/:userId')

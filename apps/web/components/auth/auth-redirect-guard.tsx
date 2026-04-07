@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PageStatusCard } from '@/components/app-shell/page-state';
 import { useAuthSession } from '@/lib/auth/auth-session-provider';
 import { getWorkspaceBoardHref } from '@/lib/app-shell';
 
 export function AuthRedirectGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status, auth, errorMessage, clearSession } = useAuthSession();
 
   useEffect(() => {
@@ -15,9 +16,16 @@ export function AuthRedirectGuard({ children }: { children: ReactNode }) {
       return;
     }
 
+    const nextPath = searchParams.get('next');
+
+    if (nextPath) {
+      router.replace(nextPath);
+      return;
+    }
+
     const destinationWorkspace = auth.activeWorkspace ?? auth.workspaces[0];
     router.replace(destinationWorkspace ? getWorkspaceBoardHref(destinationWorkspace.id) : '/');
-  }, [auth, router, status]);
+  }, [auth, router, searchParams, status]);
 
   if (status === 'loading') {
     return (

@@ -1,0 +1,184 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import type { PublicWorkspaceShareLinkLookup } from '@teamwork/types';
+import {
+  acceptWorkspaceShareLinkByToken,
+  ApiError,
+  getPublicWorkspaceShareLink,
+} from '@/lib/api/client';
+import { PageStatusCard } from '@/components/app-shell/page-state';
+import { FormMessage } from '@/components/ui/form-controls';
+import { AppButton } from '@/components/ui/button';
+import { useAuthSession } from '@/lib/auth/auth-session-provider';
+import { getWorkspaceBoardHref } from '@/lib/app-shell';
+
+export default function WorkspaceJoinPage() {
+  const params = useParams<{ token: string }>();
+  const router = useRouter();
+  const { status, auth, accessToken, refreshSession } = useAuthSession();
+  const token = typeof params.token === 'string' ? params.token : '';
+  const [lookup, setLookup] = useState<PublicWorkspaceShareLinkLookup | null>(null);
+  const [lookupState, setLookupState] = useState<'loading' | 'success' | 'error'>('loading');
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    setLookupState('loading');
+    setLookupError(null);
+
+    void getPublicWorkspaceShareLink(token)
+      .then((result) => {
+        if (!isActive) {
+          return;
+        }
+
+        setLookup(result);
+        setLookupState('success');
+      })
+      .catch((error) => {
+        if (!isActive) {
+          return;
+        }
+
+        setLookupState('error');
+        setLookupError(
+          error instanceof ApiError || error instanceof Error
+            ? error.message
+            : 'Workspace share link could not be loaded.',
+        );
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [token]);
+
+  const existingWorkspace = useMemo(
+    () => auth.workspaces.find((workspace) => workspace.id === lookup?.workspace.id) ?? null,
+    [auth.workspaces, lookup?.workspace.id],
+  );
+  const nextPath = `/join/${encodeURIComponent(token)}`;
+
+  if (lookupState === 'loading') {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6 py-10">
+        <PageStatusCard
+          title="Loading workspace link"
+          description="Checking this workspace share link."
+          tone="default"
+        />
+      </main>
+    );
+  }
+
+  if (lookupState === 'error' || !lookup) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6 py-10">
+        <PageStatusCard
+          title="Workspace link unavailable"
+          description={lookupError ?? 'This workspace share link is not available.'}
+          tone="danger"
+        />
+      </main>
+    );
+  }
+
+  if (status === 'loading') {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6 py-10">
+        <PageStatusCard
+          title="Checking your session"
+          description="Preparing the right join action for this workspace."
+          tone="default"
+        />
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center px-6 py-10">
+      <section className="w-full max-w-[620px] rounded-[var(--radius-panel)] border border-line bg-surface-strong px-8 py-8 shadow-[var(--panel-shadow)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">
+          Workspace Invite
+        </p>
+        <h1 className="mt-3 text-[2rem] font-semibold tracking-tight text-foreground">
+          Join {lookup.workspace.name}
+        </h1>
+        <p className="mt-2 text-[0.96rem] leading-7 text-muted">
+          This workspace share link grants <span className="font-semibold text-foreground">{lookup.shareLink.role}</span> access.
+        </p>
+
+        {joinError ? <FormMessage message={joinError} /> : null}
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          {existingWorkspace ? (
+            <AppButton
+              type="button"
+              onClick={() => {
+                router.push(getWorkspaceBoardHref(existingWorkspace.id));
+              }}
+            >
+              Open Workspace
+            </AppButton>
+          ) : null}
+
+          {status === 'authenticated' && !existingWorkspace ? (
+            <AppButton
+              type="button"
+              disabled={isJoining || !accessToken}
+              onClick={() => {
+                setIsJoining(true);
+                setJoinError(null);
+
+                void acceptWorkspaceShareLinkByToken(token, accessToken ?? '')
+                  .then(async () => {
+                    await refreshSession();
+                    router.replace(getWorkspaceBoardHref(lookup.workspace.id));
+                  })
+                  .catch((error) => {
+                    setJoinError(
+                      error instanceof ApiError || error instanceof Error
+                        ? error.message
+                        : 'Workspace could not be joined.',
+                    );
+                  })
+                  .finally(() => {
+                    setIsJoining(false);
+                  });
+              }}
+            >
+              {isJoining ? 'Joining...' : 'Join Workspace'}
+            </AppButton>
+          ) : null}
+
+          {status !== 'authenticated' ? (
+            <>
+              <AppButton
+                type="button"
+                onClick={() => {
+                  router.push(`/auth-required?next=${encodeURIComponent(nextPath)}`);
+                }}
+              >
+                Sign In To Join
+              </AppButton>
+              <AppButton
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  router.push(`/sign-up?next=${encodeURIComponent(nextPath)}`);
+                }}
+              >
+                Create Account
+              </AppButton>
+            </>
+          ) : null}
+        </div>
+      </section>
+    </main>
+  );
+}

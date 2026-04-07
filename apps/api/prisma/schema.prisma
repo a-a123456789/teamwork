@@ -28,6 +28,7 @@ model User {
   createdWorkspaces         Workspace[]           @relation("WorkspaceCreator")
   memberships               WorkspaceMembership[]
   sentWorkspaceInvitations  WorkspaceInvitation[] @relation("WorkspaceInvitationInviter")
+  createdWorkspaceShareLinks WorkspaceShareLink[] @relation("WorkspaceShareLinkCreator")
   createdTasks              Task[]                @relation("TaskCreator")
   assignedTasks             Task[]                @relation("TaskAssignee")
 
@@ -44,6 +45,7 @@ model Workspace {
   createdByUser   User                  @relation("WorkspaceCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   memberships     WorkspaceMembership[]
   invitations     WorkspaceInvitation[]
+  shareLink       WorkspaceShareLink?
   tasks           Task[]
 
   @@index([createdByUserId])
@@ -82,6 +84,20 @@ model WorkspaceInvitation {
   @@index([workspaceId])
   @@index([email])
   @@map("workspace_invitations")
+}
+
+model WorkspaceShareLink {
+  id              String        @id @default(uuid()) @db.Uuid
+  workspaceId     String        @unique @map("workspace_id") @db.Uuid
+  token           String        @unique
+  role            WorkspaceRole
+  createdByUserId String        @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByUser   User          @relation("WorkspaceShareLinkCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@map("workspace_share_links")
 }
 
 model Task {
