@@ -9,6 +9,7 @@ import { UsersService } from '../users/users.service';
 import { WorkspaceInvitationsService } from './workspace-invitations.service';
 
 describe('WorkspaceInvitationsService', () => {
+  const suiteNow = new Date('2026-03-26T00:00:00.000Z');
   const workspaceId = 'workspace-1';
   const invitationId = 'invitation-1';
   type WorkspaceInvitationCreateCall = {
@@ -79,6 +80,8 @@ describe('WorkspaceInvitationsService', () => {
   };
 
   beforeEach(async () => {
+    jest.useFakeTimers().setSystemTime(suiteNow);
+
     const runInTransaction = <T>(callback: (tx: typeof prisma) => Promise<T>): Promise<T> =>
       callback(prisma);
     const toUserSummary = (user: UserRecord): UserSummary => ({
@@ -152,6 +155,10 @@ describe('WorkspaceInvitationsService', () => {
     }).compile();
 
     service = moduleRef.get(WorkspaceInvitationsService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('creates a pending invitation for an existing user', async () => {

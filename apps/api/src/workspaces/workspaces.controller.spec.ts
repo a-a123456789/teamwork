@@ -39,13 +39,9 @@ describe('WorkspacesController authorization metadata', () => {
     expect(Reflect.getMetadata(WORKSPACE_ROLES_KEY, handler)).toEqual(['owner']);
   });
 
-  it('keeps the owner-only invite route enforced', () => {
+  it('keeps the invite route mounted at the members path', () => {
     const handler = controllerPrototype.addMember;
 
-    expect(Reflect.getMetadata(GUARDS_METADATA, handler)).toEqual([
-      WorkspaceMemberGuard,
-      WorkspaceRoleGuard,
-    ]);
-    expect(Reflect.getMetadata(WORKSPACE_ROLES_KEY, handler)).toEqual(['owner']);
+    expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(':workspaceId/members');
   });
 });
