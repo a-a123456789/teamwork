@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type SyntheticEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ApiError, register } from '@/lib/api/client';
 import { useAuthSession } from '@/lib/auth/auth-session-provider';
 import {
@@ -22,6 +22,7 @@ const INITIAL_VALUES: SignUpFormValues = {
 
 export function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setAccessToken } = useAuthSession();
   const [values, setValues] = useState(INITIAL_VALUES);
   const [errors, setErrors] = useState<SignUpErrors>({});
@@ -67,6 +68,13 @@ export function SignUpForm() {
             sessionResult.errorMessage ??
             'Account created, but the session could not be restored. Please try signing in.',
         });
+        return;
+      }
+
+      const nextPath = searchParams.get('next');
+
+      if (nextPath) {
+        router.replace(nextPath);
         return;
       }
 

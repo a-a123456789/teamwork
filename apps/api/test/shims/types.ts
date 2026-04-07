@@ -55,6 +55,29 @@ export interface PublicWorkspaceInvitationLookup {
   status: PublicWorkspaceInvitationStatus;
 }
 
+export interface WorkspaceShareLinkSummary {
+  id: ID;
+  workspaceId: ID;
+  role: WorkspaceRole;
+  createdByUserId: ID;
+  createdAt: string;
+  updatedAt: string;
+  url: string;
+}
+
+export interface PublicWorkspaceShareLinkSummary {
+  id: ID;
+  workspaceId: ID;
+  role: WorkspaceRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicWorkspaceShareLinkLookup {
+  shareLink: PublicWorkspaceShareLinkSummary;
+  workspace: WorkspaceSummary;
+}
+
 export interface WorkspaceSummary {
   id: ID;
   name: string;

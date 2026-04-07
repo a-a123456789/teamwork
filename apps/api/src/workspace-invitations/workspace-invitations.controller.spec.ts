@@ -16,17 +16,21 @@ describe('WorkspaceInvitationsController', () => {
   let controller: WorkspaceInvitationsController;
   let workspaceInvitationsService: {
     getInvitationByToken: jest.Mock;
+    getWorkspaceShareLinkByToken: jest.Mock;
     listPendingInvitationsForEmail: jest.Mock;
     acceptInvitation: jest.Mock;
     acceptInvitationByToken: jest.Mock;
+    acceptWorkspaceShareLinkByToken: jest.Mock;
   };
 
   beforeEach(() => {
     workspaceInvitationsService = {
       getInvitationByToken: jest.fn(),
+      getWorkspaceShareLinkByToken: jest.fn(),
       listPendingInvitationsForEmail: jest.fn(),
       acceptInvitation: jest.fn(),
       acceptInvitationByToken: jest.fn(),
+      acceptWorkspaceShareLinkByToken: jest.fn(),
     };
 
     controller = new WorkspaceInvitationsController(workspaceInvitationsService as never);
@@ -44,6 +48,12 @@ describe('WorkspaceInvitationsController', () => {
       Reflect.getMetadata(
         IS_PUBLIC_KEY,
         WorkspaceInvitationsController.prototype.getInvitationByToken,
+      ),
+    ).toBe(true);
+    expect(
+      Reflect.getMetadata(
+        IS_PUBLIC_KEY,
+        WorkspaceInvitationsController.prototype.getWorkspaceShareLinkByToken,
       ),
     ).toBe(true);
   });
@@ -67,6 +77,22 @@ describe('WorkspaceInvitationsController', () => {
     });
     expect(workspaceInvitationsService.acceptInvitationByToken).toHaveBeenCalledWith(
       'plain-token',
+      user,
+    );
+  });
+
+  it('accepts a workspace share link by token through the service', async () => {
+    workspaceInvitationsService.acceptWorkspaceShareLinkByToken.mockResolvedValueOnce({
+      membership: { id: 'membership-1' },
+    });
+
+    await expect(controller.acceptWorkspaceShareLinkByToken(user, 'share-token')).resolves.toEqual(
+      {
+        membership: { id: 'membership-1' },
+      },
+    );
+    expect(workspaceInvitationsService.acceptWorkspaceShareLinkByToken).toHaveBeenCalledWith(
+      'share-token',
       user,
     );
   });

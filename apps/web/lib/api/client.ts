@@ -3,6 +3,8 @@ import type {
   AuthMeResponse,
   CreateTaskInput,
   InviteWorkspaceMemberResult,
+  PublicWorkspaceInvitationLookup,
+  PublicWorkspaceShareLinkLookup,
   RegisterResponse,
   UserInvitationsResponse,
   TaskDeleteResponse,
@@ -17,15 +19,19 @@ import type {
   WorkspaceInvitationsResponse,
   WorkspaceMembersResponse,
   WorkspaceResponse,
+  WorkspaceShareLinkResponse,
 } from '@teamwork/types';
 import {
   parseAuthPayload,
   parseAuthMeResponse,
   parseInviteWorkspaceMemberResult,
+  parsePublicWorkspaceInvitationLookup,
+  parsePublicWorkspaceShareLinkLookup,
   parseRegisterResponse,
   parseUserInvitationsResponse,
   parseWorkspaceInvitationResponse,
   parseWorkspaceMemberResponse,
+  parseWorkspaceShareLinkResponse,
   parseTaskListResponse,
   parseTaskResponse,
   parseWorkspaceInvitationsResponse,
@@ -125,6 +131,40 @@ export async function getWorkspaceInvitations(
   });
 }
 
+export async function getWorkspaceShareLink(
+  workspaceId: string,
+  accessToken: string,
+): Promise<WorkspaceShareLinkResponse> {
+  return apiRequest(`/workspaces/${workspaceId}/share-link`, {
+    accessToken,
+    parser: parseWorkspaceShareLinkResponse,
+  });
+}
+
+export async function updateWorkspaceShareLink(
+  workspaceId: string,
+  accessToken: string,
+  role: 'owner' | 'member',
+): Promise<WorkspaceShareLinkResponse> {
+  return apiRequest(`/workspaces/${workspaceId}/share-link`, {
+    accessToken,
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+    parser: parseWorkspaceShareLinkResponse,
+  });
+}
+
+export async function regenerateWorkspaceShareLink(
+  workspaceId: string,
+  accessToken: string,
+): Promise<WorkspaceShareLinkResponse> {
+  return apiRequest(`/workspaces/${workspaceId}/share-link/regenerate`, {
+    accessToken,
+    method: 'POST',
+    parser: parseWorkspaceShareLinkResponse,
+  });
+}
+
 export async function listMyInvitationInbox(
   accessToken: string,
 ): Promise<UserInvitationsResponse> {
@@ -167,6 +207,44 @@ export async function acceptWorkspaceInvitation(
   accessToken: string,
 ): Promise<WorkspaceMemberResponse> {
   return apiRequest(`/workspaces/invitations/${invitationId}/accept`, {
+    accessToken,
+    method: 'POST',
+    parser: parseWorkspaceMemberResponse,
+  });
+}
+
+export async function getPublicWorkspaceInvitation(
+  token: string,
+): Promise<PublicWorkspaceInvitationLookup> {
+  return apiRequest(`/workspace-invitations/token/${encodeURIComponent(token)}`, {
+    parser: parsePublicWorkspaceInvitationLookup,
+  });
+}
+
+export async function acceptWorkspaceInvitationByToken(
+  token: string,
+  accessToken: string,
+): Promise<WorkspaceMemberResponse> {
+  return apiRequest(`/workspace-invitations/token/${encodeURIComponent(token)}/accept`, {
+    accessToken,
+    method: 'POST',
+    parser: parseWorkspaceMemberResponse,
+  });
+}
+
+export async function getPublicWorkspaceShareLink(
+  token: string,
+): Promise<PublicWorkspaceShareLinkLookup> {
+  return apiRequest(`/workspace-share-links/token/${encodeURIComponent(token)}`, {
+    parser: parsePublicWorkspaceShareLinkLookup,
+  });
+}
+
+export async function acceptWorkspaceShareLinkByToken(
+  token: string,
+  accessToken: string,
+): Promise<WorkspaceMemberResponse> {
+  return apiRequest(`/workspace-share-links/token/${encodeURIComponent(token)}/accept`, {
     accessToken,
     method: 'POST',
     parser: parseWorkspaceMemberResponse,
