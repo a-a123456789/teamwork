@@ -107,7 +107,7 @@ const TASK_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
-const TASK_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+const TASK_UPDATED_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'numeric',
   day: 'numeric',
   year: 'numeric',
@@ -152,7 +152,7 @@ const TaskInboxRow = memo(function TaskInboxRow({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.88rem] text-muted">
         <TaskMeta label={task.assigneeUser?.displayName ?? 'Unassigned'} />
         <TaskMeta label={`By ${task.createdByUser.displayName}`} />
-        <TaskMeta label={`Updated ${formatDateTime(task.updatedAt)}`} />
+        <TaskMeta label={`Updated ${formatUpdatedDate(task.updatedAt)}`} />
       </div>
     </button>
   );
@@ -190,6 +190,6 @@ function formatDate(value: string): string {
   return TASK_DATE_FORMATTER.format(new Date(`${value}T00:00:00.000Z`));
 }
 
-function formatDateTime(value: string): string {
-  return TASK_DATE_TIME_FORMATTER.format(new Date(value));
+function formatUpdatedDate(value: string): string {
+  return TASK_UPDATED_DATE_FORMATTER.format(new Date(value));
 }

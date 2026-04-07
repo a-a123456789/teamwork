@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import type {
   InviteWorkspaceMemberResult,
   WorkspaceInvitationSummary,
@@ -44,8 +44,17 @@ export function InvitationsPage({
     const visibleCreatedInvitations = createdInvitations.filter(
       (invitation) => !removedInvitationIds[invitation.id],
     );
+    const invitationMap = new Map<string, WorkspaceInvitationSummary>();
 
-    return [...visibleServerInvitations, ...visibleCreatedInvitations];
+    for (const invitation of visibleCreatedInvitations) {
+      invitationMap.set(invitation.id, invitation);
+    }
+
+    for (const invitation of visibleServerInvitations) {
+      invitationMap.set(invitation.id, invitation);
+    }
+
+    return Array.from(invitationMap.values());
   }, [createdInvitations, invitations, removedInvitationIds]);
 
   const sortedItems = useMemo(
@@ -57,43 +66,49 @@ export function InvitationsPage({
     [items],
   );
 
-  const handleRevoke = async (invitation: WorkspaceInvitationSummary) => {
-    if (!accessToken || !isOwner) {
-      return;
-    }
+  const handleRevoke = useCallback(
+    async (invitation: WorkspaceInvitationSummary) => {
+      if (!accessToken || !isOwner) {
+        return;
+      }
 
-    setRowState((current) => ({
-      ...current,
-      [invitation.id]: {
-        isRevoking: true,
-        errorMessage: null,
-      },
-    }));
-
-    try {
-      await revokeWorkspaceInvitation(workspaceId, invitation.id, accessToken);
-      setRemovedInvitationIds((current) => ({
-        ...current,
-        [invitation.id]: true,
-      }));
-      setRowState((current) => {
-        const { [invitation.id]: removed, ...remaining } = current;
-        void removed;
-        return remaining;
-      });
-    } catch (error) {
       setRowState((current) => ({
         ...current,
         [invitation.id]: {
-          isRevoking: false,
-          errorMessage:
-            error instanceof ApiError || error instanceof Error
-              ? error.message
-              : 'Invitation could not be canceled.',
+          isRevoking: true,
+          errorMessage: null,
         },
       }));
-    }
-  };
+
+      try {
+        await revokeWorkspaceInvitation(workspaceId, invitation.id, accessToken);
+        setRemovedInvitationIds((current) => ({
+          ...current,
+          [invitation.id]: true,
+        }));
+        setCreatedInvitations((current) =>
+          current.filter((createdInvitation) => createdInvitation.id !== invitation.id),
+        );
+        setRowState((current) => {
+          const { [invitation.id]: removed, ...remaining } = current;
+          void removed;
+          return remaining;
+        });
+      } catch (error) {
+        setRowState((current) => ({
+          ...current,
+          [invitation.id]: {
+            isRevoking: false,
+            errorMessage:
+              error instanceof ApiError || error instanceof Error
+                ? error.message
+                : 'Invitation could not be canceled.',
+          },
+        }));
+      }
+    },
+    [accessToken, isOwner, workspaceId],
+  );
 
   return (
     <>
@@ -187,7 +202,13 @@ export function InvitationsPage({
             void _removed;
             return remaining;
           });
-          setCreatedInvitations((current) => [...current, result.invitation]);
+          setCreatedInvitations((current) => {
+            const next = current.filter(
+              (invitation) => invitation.id !== result.invitation.id,
+            );
+            next.push(result.invitation);
+            return next;
+          });
         }}
       />
     </>
