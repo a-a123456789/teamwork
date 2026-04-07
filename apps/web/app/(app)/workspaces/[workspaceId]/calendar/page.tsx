@@ -168,6 +168,7 @@ export default function WorkspaceCalendarPage() {
 
     setActionOverride({
       label: 'Create Task',
+      icon: 'create',
       onAction: handleOpenCreateTaskModal,
     });
 

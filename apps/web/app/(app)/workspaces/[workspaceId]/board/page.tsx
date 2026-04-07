@@ -33,9 +33,11 @@ import {
 } from '@/lib/task-list';
 
 const STATUS_OPTIONS: BoardStatusFilter[] = ['all', 'todo', 'in_progress', 'done'];
+const GENERIC_WORKSPACE_ERROR_MESSAGE = 'This workspace could not be loaded right now.';
+const GENERIC_TASKS_ERROR_MESSAGE = 'Workspace tasks could not be loaded right now.';
 
 export default function WorkspaceBoardPage() {
-  const params = useParams();
+  const params = useParams<{ workspaceId: string }>();
   const workspaceId = readWorkspaceIdFromParams(params);
   const { auth } = useAuthSession();
   const [statusFilter, setStatusFilter] = useState(DEFAULT_BOARD_STATUS_FILTER);
@@ -117,6 +119,7 @@ export default function WorkspaceBoardPage() {
 
     setActionOverride({
       label: 'Create Task',
+      icon: 'create',
       onAction: openCreateTaskModal,
     });
 
@@ -124,6 +127,25 @@ export default function WorkspaceBoardPage() {
       setActionOverride(null);
     };
   }, [openCreateTaskModal, setActionOverride, workspaceQuery.status]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') {
+      return;
+    }
+
+    if (workspaceQuery.status === 'error') {
+      console.error('Failed to load board workspace details.', workspaceQuery.error);
+    }
+
+    if (tasksQuery.status === 'error') {
+      console.error('Failed to load board tasks.', tasksQuery.error);
+    }
+  }, [
+    tasksQuery.error,
+    tasksQuery.status,
+    workspaceQuery.error,
+    workspaceQuery.status,
+  ]);
 
   return (
     <div className="mx-auto flex w-full max-w-[1520px] flex-col">
@@ -134,11 +156,7 @@ export default function WorkspaceBoardPage() {
       {workspaceQuery.status === 'error' ? (
         <PageStatusCard
           title="Workspace unavailable"
-          description={
-            workspaceQuery.error.message
-              ? `This workspace could not be loaded right now. ${workspaceQuery.error.message}`
-              : 'This workspace could not be loaded right now.'
-          }
+          description={GENERIC_WORKSPACE_ERROR_MESSAGE}
           tone="danger"
           actionLabel="Retry board"
           onAction={() => {
@@ -150,11 +168,7 @@ export default function WorkspaceBoardPage() {
       {tasksQuery.status === 'error' ? (
         <PageStatusCard
           title="Board unavailable"
-          description={
-            tasksQuery.error.message
-              ? `Workspace tasks could not be loaded right now. ${tasksQuery.error.message}`
-              : 'Workspace tasks could not be loaded right now.'
-          }
+          description={GENERIC_TASKS_ERROR_MESSAGE}
           tone="danger"
           actionLabel="Retry board"
           onAction={() => {

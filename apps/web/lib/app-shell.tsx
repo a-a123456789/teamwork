@@ -18,6 +18,7 @@ export interface SidebarNavigationItem {
 
 export interface ShellHeaderAction {
   label: string;
+  icon?: 'create';
   href?: string;
   onAction?: () => void;
 }
@@ -180,6 +181,7 @@ export function deriveShellRouteContext(
       eyebrow: 'Workspace board',
       action: {
         label: 'Create Task',
+        icon: 'create',
       },
     },
     currentWorkspace,

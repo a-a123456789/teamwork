@@ -15,7 +15,7 @@ export function AppShellHeader({ routeContext }: AppShellHeaderProps) {
     'inline-flex min-h-10 items-center justify-center gap-2.5 rounded-[0.92rem] bg-accent px-[1.125rem] text-[0.94rem] font-semibold text-white transition-colors hover:bg-accent-strong';
   const disabledActionClassName =
     'inline-flex min-h-10 cursor-not-allowed items-center justify-center gap-2.5 rounded-[0.92rem] bg-accent px-[1.125rem] text-[0.94rem] font-semibold text-white/80 opacity-60';
-  const showCreateIcon = action?.label === 'Create Task';
+  const showCreateIcon = action?.icon === 'create';
 
   return (
     <header className="flex items-start justify-between gap-4 border-b border-line px-4 py-3.5 lg:px-6">

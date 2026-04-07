@@ -1,5 +1,6 @@
 import type { GroupedBoardColumn } from '@/lib/board';
 import { BoardTaskCard } from '@/components/board/task-card';
+import { readBoardStatusAccent } from '@/lib/board-status-accent';
 
 interface BoardColumnProps {
   column: GroupedBoardColumn;
@@ -8,7 +9,7 @@ interface BoardColumnProps {
 }
 
 export function BoardColumn({ column, hasAnyVisibleTasks, onTaskOpen }: BoardColumnProps) {
-  const accent = readColumnAccent(column.status);
+  const accent = readBoardStatusAccent(column.status);
 
   return (
     <section className="flex min-w-0 flex-1 flex-col px-[1rem] py-[1.25rem] sm:px-[1.25rem] sm:py-[1.5rem]">
@@ -37,16 +38,4 @@ export function BoardColumn({ column, hasAnyVisibleTasks, onTaskOpen }: BoardCol
       </div>
     </section>
   );
-}
-
-function readColumnAccent(status: GroupedBoardColumn['status']): { dotClassName: string } {
-  if (status === 'todo') {
-    return { dotClassName: 'bg-[#7be7a5]' };
-  }
-
-  if (status === 'in_progress') {
-    return { dotClassName: 'bg-[#ffbc00]' };
-  }
-
-  return { dotClassName: 'bg-[#7a2cf5]' };
 }

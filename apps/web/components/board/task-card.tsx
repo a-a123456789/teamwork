@@ -1,4 +1,5 @@
 import type { TaskSummary } from '@teamwork/types';
+import { readBoardStatusAccent } from '@/lib/board-status-accent';
 
 interface BoardTaskCardProps {
   task: TaskSummary;
@@ -6,7 +7,7 @@ interface BoardTaskCardProps {
 }
 
 export function BoardTaskCard({ task, onOpen }: BoardTaskCardProps) {
-  const accentStyles = readTaskCardAccent(task.status);
+  const accentStyles = readBoardStatusAccent(task.status);
 
   return (
     <button
@@ -41,28 +42,4 @@ export function BoardTaskCard({ task, onOpen }: BoardTaskCardProps) {
 
 function TaskMeta({ label }: { label: string }) {
   return <span className="font-medium">{label}</span>;
-}
-
-function readTaskCardAccent(status: TaskSummary['status']): {
-  cardClassName: string;
-  dotClassName: string;
-} {
-  if (status === 'todo') {
-    return {
-      cardClassName: 'border-[#c8f3d6] bg-[#f3fdf6]',
-      dotClassName: 'bg-[#7be7a5]',
-    };
-  }
-
-  if (status === 'in_progress') {
-    return {
-      cardClassName: 'border-[#ffe067] bg-[#fffceb]',
-      dotClassName: 'bg-[#ffbc00]',
-    };
-  }
-
-  return {
-    cardClassName: 'border-[#dccfff] bg-[#f7f3ff]',
-    dotClassName: 'bg-[#7a2cf5]',
-  };
 }

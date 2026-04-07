@@ -4,6 +4,7 @@ describe('validateEnvironment', () => {
   it('defaults invite configuration from the app url', () => {
     const result = validateEnvironment({});
 
+    expect(result['NODE_ENV']).toBe('development');
     expect(result['APP_URL']).toBe('http://localhost:3000');
     expect(result['INVITE_BASE_URL']).toBe('http://localhost:3000');
     expect(result['INVITE_TTL_DAYS']).toBe(30);
@@ -35,5 +36,13 @@ describe('validateEnvironment', () => {
         INVITE_TTL_DAYS: '0',
       }),
     ).toThrow('Invalid positive integer: 0');
+  });
+
+  it('rejects an invalid node environment', () => {
+    expect(() =>
+      validateEnvironment({
+        NODE_ENV: 'staging',
+      }),
+    ).toThrow('Invalid NODE_ENV: staging');
   });
 });
