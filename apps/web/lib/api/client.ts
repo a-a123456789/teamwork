@@ -16,6 +16,7 @@ import type {
   UpdateTaskStatusInput,
   WorkspaceInvitationResponse,
   WorkspaceMemberResponse,
+  WorkspaceMemberRemovalResponse,
   WorkspaceInvitationsResponse,
   WorkspaceMembersResponse,
   WorkspaceResponse,
@@ -31,6 +32,7 @@ import {
   parseUserInvitationsResponse,
   parseWorkspaceInvitationResponse,
   parseWorkspaceMemberResponse,
+  parseWorkspaceMemberRemovalResponse,
   parseWorkspaceShareLinkResponse,
   parseTaskListResponse,
   parseTaskResponse,
@@ -130,6 +132,18 @@ export async function updateWorkspaceMemberRole(
     method: 'PATCH',
     body: JSON.stringify({ role }),
     parser: parseWorkspaceMemberResponse,
+  });
+}
+
+export async function removeWorkspaceMember(
+  workspaceId: string,
+  userId: string,
+  accessToken: string,
+): Promise<WorkspaceMemberRemovalResponse> {
+  return apiRequest(`/workspaces/${workspaceId}/members/${userId}`, {
+    accessToken,
+    method: 'DELETE',
+    parser: parseWorkspaceMemberRemovalResponse,
   });
 }
 
@@ -408,11 +422,15 @@ async function apiRequest<T>(path: string, options: ApiRequestOptions<T>): Promi
 }
 
 function parseTaskDeleteResponse(value: unknown): TaskDeleteResponse {
+  return parseSuccessResponse(value, 'task delete');
+}
+
+function parseSuccessResponse(value: unknown, label: string): { success: true } {
   if (isRecord(value) && value['success'] === true) {
     return { success: true };
   }
 
-  throw new Error('Expected task delete response.');
+  throw new Error(`Expected ${label} response.`);
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
