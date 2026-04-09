@@ -157,6 +157,14 @@ export interface TaskDeleteResponse {
   success: true;
 }
 
+export interface WorkspaceDeleteResponse {
+  success: true;
+}
+
+export interface WorkspaceMemberRemovalResponse {
+  success: true;
+}
+
 export interface InviteWorkspaceMemberResult {
   kind: 'invitation';
   invitation: WorkspaceInvitationSummary;

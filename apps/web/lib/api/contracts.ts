@@ -13,8 +13,10 @@ import type {
   WorkspaceInvitationSummary,
   WorkspaceInvitationResponse,
   WorkspaceInvitationsResponse,
+  WorkspaceDeleteResponse,
   WorkspaceMemberDetail,
   WorkspaceMemberResponse,
+  WorkspaceMemberRemovalResponse,
   WorkspaceMembersResponse,
   WorkspaceMembershipSummary,
   WorkspaceResponse,
@@ -66,6 +68,28 @@ export function parseWorkspaceMemberResponse(value: unknown): WorkspaceMemberRes
   return {
     membership: parseWorkspaceMemberDetail(record['membership']),
   };
+}
+
+export function parseWorkspaceMemberRemovalResponse(
+  value: unknown,
+): WorkspaceMemberRemovalResponse {
+  const record = readRecord(value);
+
+  if (record['success'] === true) {
+    return { success: true };
+  }
+
+  throw new Error('Expected workspace member removal response.');
+}
+
+export function parseWorkspaceDeleteResponse(value: unknown): WorkspaceDeleteResponse {
+  const record = readRecord(value);
+
+  if (record['success'] === true) {
+    return { success: true };
+  }
+
+  throw new Error('Expected workspace delete response.');
 }
 
 export function parseWorkspaceInvitationsResponse(

@@ -7,6 +7,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "types": ["jest", "node", "@playwright/test"],
     "plugins": [
       {
         "name": "next"
