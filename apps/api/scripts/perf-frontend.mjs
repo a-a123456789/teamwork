@@ -12,6 +12,8 @@ import {
 const DEFAULT_WEB_BASE_URL = 'http://127.0.0.1:3001';
 const DEFAULT_RUNS = 10;
 const DEFAULT_TIMEOUT_MS = 30000;
+const DEFAULT_WARMUP_RUNS = 1;
+const ACCESS_TOKEN_COOKIE_NAME = 'teamwork.accessToken';
 
 export async function runFrontendBenchmarks(options) {
   const webBaseUrl = stripTrailingSlash(
@@ -21,65 +23,42 @@ export async function runFrontendBenchmarks(options) {
   const workspaceId = options.workspaceId ?? getEnvString('BENCH_WORKSPACE_ID');
   const runs = options.runs ?? getEnvInteger('FRONTEND_RUNS', DEFAULT_RUNS);
   const timeoutMs = options.timeoutMs ?? getEnvInteger('FRONTEND_TIMEOUT_MS', DEFAULT_TIMEOUT_MS);
+  const warmupRuns =
+    options.warmupRuns ?? getEnvInteger('FRONTEND_WARMUP_RUNS', DEFAULT_WARMUP_RUNS);
 
   const boardUrl = `${webBaseUrl}/workspaces/${workspaceId}/board`;
+  const webOrigin = new URL(webBaseUrl).origin;
   const browser = await chromium.launch({ headless: true });
   const runResults = [];
+  const warmupResults = [];
 
   try {
+    for (let warmupRunNumber = 1; warmupRunNumber <= warmupRuns; warmupRunNumber += 1) {
+      const warmupResult = await runBoardMeasurement({
+        browser,
+        boardUrl,
+        webOrigin,
+        accessToken,
+        timeoutMs,
+      });
+      warmupResults.push({
+        run: warmupRunNumber,
+        ...warmupResult,
+      });
+    }
+
     for (let runNumber = 1; runNumber <= runs; runNumber += 1) {
-      const context = await browser.newContext();
-      const page = await context.newPage();
-
-      try {
-        await page.addInitScript((token) => {
-          window.localStorage.setItem('teamwork.accessToken', token);
-        }, accessToken);
-
-        const start = performance.now();
-        await page.goto(boardUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
-        await page.waitForSelector('[data-perf-board-ready="true"]', { timeout: timeoutMs });
-        const boardReadyMs = performance.now() - start;
-
-        const navigationTiming = await page.evaluate(() => {
-          const navEntry = performance.getEntriesByType('navigation')[0];
-
-          if (!navEntry || typeof navEntry !== 'object') {
-            return {
-              domContentLoadedMs: 0,
-              loadEventMs: 0,
-              responseStartMs: 0,
-            };
-          }
-
-          return {
-            domContentLoadedMs:
-              typeof navEntry.domContentLoadedEventEnd === 'number'
-                ? navEntry.domContentLoadedEventEnd
-                : 0,
-            loadEventMs: typeof navEntry.loadEventEnd === 'number' ? navEntry.loadEventEnd : 0,
-            responseStartMs:
-              typeof navEntry.responseStart === 'number' ? navEntry.responseStart : 0,
-          };
-        });
-
-        runResults.push({
-          run: runNumber,
-          success: true,
-          boardReadyMs: round(boardReadyMs),
-          domContentLoadedMs: round(navigationTiming.domContentLoadedMs),
-          loadEventMs: round(navigationTiming.loadEventMs),
-          responseStartMs: round(navigationTiming.responseStartMs),
-        });
-      } catch (error) {
-        runResults.push({
-          run: runNumber,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      } finally {
-        await context.close();
-      }
+      const result = await runBoardMeasurement({
+        browser,
+        boardUrl,
+        webOrigin,
+        accessToken,
+        timeoutMs,
+      });
+      runResults.push({
+        run: runNumber,
+        ...result,
+      });
     }
   } finally {
     await browser.close();
@@ -96,8 +75,11 @@ export async function runFrontendBenchmarks(options) {
     boardUrl,
     config: {
       runs,
+      warmupRuns,
       timeoutMs,
     },
+    warmupSuccessfulRuns: warmupResults.filter((result) => result.success).length,
+    warmupFailedRuns: warmupResults.filter((result) => !result.success).length,
     successfulRuns: successfulRuns.length,
     failedRuns: runResults.length - successfulRuns.length,
     metrics: {
@@ -105,8 +87,76 @@ export async function runFrontendBenchmarks(options) {
       domContentLoadedMs: summarizeNumberSeries(domContentLoadedSeries),
       loadEventMs: summarizeNumberSeries(loadEventSeries),
     },
+    warmups: warmupResults,
     runs: runResults,
   };
+}
+
+async function runBoardMeasurement({
+  browser,
+  boardUrl,
+  webOrigin,
+  accessToken,
+  timeoutMs,
+}) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  try {
+    await context.addCookies([
+      {
+        name: ACCESS_TOKEN_COOKIE_NAME,
+        value: accessToken,
+        url: webOrigin,
+        sameSite: 'Lax',
+      },
+    ]);
+
+    await page.addInitScript((token) => {
+      window.localStorage.setItem('teamwork.accessToken', token);
+    }, accessToken);
+
+    const start = performance.now();
+    await page.goto(boardUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+    await page.waitForSelector('[data-perf-board-ready="true"]', { timeout: timeoutMs });
+    const boardReadyMs = performance.now() - start;
+
+    const navigationTiming = await page.evaluate(() => {
+      const navEntry = performance.getEntriesByType('navigation')[0];
+
+      if (!navEntry || typeof navEntry !== 'object') {
+        return {
+          domContentLoadedMs: 0,
+          loadEventMs: 0,
+          responseStartMs: 0,
+        };
+      }
+
+      return {
+        domContentLoadedMs:
+          typeof navEntry.domContentLoadedEventEnd === 'number'
+            ? navEntry.domContentLoadedEventEnd
+            : 0,
+        loadEventMs: typeof navEntry.loadEventEnd === 'number' ? navEntry.loadEventEnd : 0,
+        responseStartMs: typeof navEntry.responseStart === 'number' ? navEntry.responseStart : 0,
+      };
+    });
+
+    return {
+      success: true,
+      boardReadyMs: round(boardReadyMs),
+      domContentLoadedMs: round(navigationTiming.domContentLoadedMs),
+      loadEventMs: round(navigationTiming.loadEventMs),
+      responseStartMs: round(navigationTiming.responseStartMs),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    await context.close();
+  }
 }
 
 async function runFromCli() {
