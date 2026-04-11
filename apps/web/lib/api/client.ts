@@ -44,12 +44,14 @@ import {
   parseWorkspaceMembersResponse,
   parseWorkspaceResponse,
 } from '@/lib/api/contracts';
+import { COOKIE_SESSION_MARKER_PREFIX } from '@/lib/auth/session-constants';
 
 interface ApiRequestOptions<T> {
-  accessToken?: string;
+  accessToken?: string | null;
   parser: (value: unknown) => T;
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: string;
+  retryOnUnauthorized?: boolean;
 }
 
 export class ApiError extends Error {
@@ -62,9 +64,9 @@ export class ApiError extends Error {
   }
 }
 
-export async function getAuthMe(accessToken: string): Promise<AuthMeResponse> {
+export async function getAuthMe(accessToken?: string | null): Promise<AuthMeResponse> {
   return apiRequest('/auth/me', {
-    accessToken,
+    ...(accessToken === undefined ? {} : { accessToken }),
     parser: parseAuthMeResponse,
   });
 }
@@ -77,6 +79,7 @@ export async function login(input: {
     method: 'POST',
     body: JSON.stringify(input),
     parser: parseAuthPayload,
+    retryOnUnauthorized: false,
   });
 }
 
@@ -90,7 +93,44 @@ export async function register(input: {
     method: 'POST',
     body: JSON.stringify(input),
     parser: parseRegisterResponse,
+    retryOnUnauthorized: false,
   });
+}
+
+export async function refreshAuthSession(): Promise<boolean> {
+  const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+    },
+    credentials: 'include',
+    cache: 'no-store',
+  });
+
+  if (response.ok) {
+    return true;
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    return false;
+  }
+
+  throw new ApiError(await readErrorMessage(response), response.status);
+}
+
+export async function logoutAuthSession(): Promise<void> {
+  const response = await fetch(`${getApiBaseUrl()}/auth/logout`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+    },
+    credentials: 'include',
+    cache: 'no-store',
+  });
+
+  if (!response.ok && response.status !== 401 && response.status !== 403) {
+    throw new ApiError(await readErrorMessage(response), response.status);
+  }
 }
 
 export async function createWorkspace(
@@ -478,7 +518,7 @@ export async function deleteWorkspaceTask(
 }
 
 async function apiRequest<T>(path: string, options: ApiRequestOptions<T>): Promise<T> {
-  const authorizationHeader = options.accessToken
+  const authorizationHeader = shouldSendBearerToken(options.accessToken)
     ? { Authorization: `Bearer ${options.accessToken}` }
     : {};
 
@@ -489,9 +529,28 @@ async function apiRequest<T>(path: string, options: ApiRequestOptions<T>): Promi
       Accept: 'application/json',
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     },
+    credentials: 'include',
     body: options.body ?? null,
     cache: 'no-store',
   });
+
+  if (
+    response.status === 401 &&
+    options.retryOnUnauthorized !== false &&
+    !shouldSendBearerToken(options.accessToken) &&
+    path !== '/auth/refresh' &&
+    path !== '/auth/login' &&
+    path !== '/auth/register'
+  ) {
+    const refreshed = await refreshAuthSession();
+
+    if (refreshed) {
+      return apiRequest(path, {
+        ...options,
+        retryOnUnauthorized: false,
+      });
+    }
+  }
 
   if (!response.ok) {
     throw new ApiError(await readErrorMessage(response), response.status);
@@ -553,4 +612,12 @@ function getApiBaseUrl(): string {
   }
 
   return 'http://localhost:3000';
+}
+
+function shouldSendBearerToken(accessToken?: string | null): accessToken is string {
+  if (!accessToken || accessToken.trim().length === 0) {
+    return false;
+  }
+
+  return !accessToken.startsWith(`${COOKIE_SESSION_MARKER_PREFIX}:`);
 }

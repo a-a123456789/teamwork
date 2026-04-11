@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { JwtAccessTokenPayload } from '@teamwork/types';
+import { AuthSessionsService } from './auth-sessions.service';
 import { JwtStrategy } from './jwt.strategy';
 
 describe('JwtStrategy', () => {
@@ -9,6 +10,7 @@ describe('JwtStrategy', () => {
 
   const userSummary = {
     id: 'user-1',
+    sessionId: 'session-1',
     email: 'alice@example.com',
     displayName: 'Alice',
     createdAt: now,
@@ -17,6 +19,7 @@ describe('JwtStrategy', () => {
 
   const payload: JwtAccessTokenPayload = {
     sub: 'user-1',
+    sessionId: 'session-1',
     email: 'alice@example.com',
     displayName: 'Alice',
     createdAt: now,
@@ -25,14 +28,25 @@ describe('JwtStrategy', () => {
   };
 
   let strategy: JwtStrategy;
+  let authSessionsService: {
+    assertSessionIsActive: jest.Mock;
+  };
 
   beforeEach(async () => {
+    authSessionsService = {
+      assertSessionIsActive: jest.fn().mockResolvedValue(undefined),
+    };
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         JwtStrategy,
         {
           provide: ConfigService,
           useValue: { get: jest.fn().mockReturnValue('test-secret') },
+        },
+        {
+          provide: AuthSessionsService,
+          useValue: authSessionsService,
         },
       ],
     }).compile();
@@ -44,6 +58,10 @@ describe('JwtStrategy', () => {
     const result = await strategy.validate(payload);
 
     expect(result).toEqual(userSummary);
+    expect(authSessionsService.assertSessionIsActive).toHaveBeenCalledWith(
+      'session-1',
+      'user-1',
+    );
   });
 
   it('throws UnauthorizedException when payload profile fields are missing', async () => {

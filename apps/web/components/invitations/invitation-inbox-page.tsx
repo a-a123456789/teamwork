@@ -9,7 +9,7 @@ import { getButtonClassName } from '@/components/ui/button';
 interface InvitationInboxPageProps {
   invitations: UserInvitationInboxItem[];
   accessToken: string | null;
-  refreshSession: () => Promise<void>;
+  refreshSession: () => Promise<unknown>;
 }
 
 type RowState = Partial<Record<string, { isAccepting: boolean; errorMessage: string | null }>>;

@@ -11,6 +11,10 @@ describe('validateEnvironment', () => {
     expect(result['SHARE_LINK_TTL_DAYS']).toBe(14);
     expect(result['THROTTLE_TTL_MS']).toBe(60000);
     expect(result['THROTTLE_LIMIT']).toBe(500);
+    expect(result['ACCESS_TOKEN_TTL_SECONDS']).toBe(900);
+    expect(result['REFRESH_TOKEN_TTL_SECONDS']).toBe(2592000);
+    expect(result['AUTH_COOKIE_SAME_SITE']).toBe('lax');
+    expect(result['AUTH_COOKIE_SECURE']).toBe(false);
   });
 
   it('uses configured invite values when they are valid', () => {
@@ -66,6 +70,7 @@ describe('validateEnvironment', () => {
 
     expect(result['THROTTLE_LIMIT']).toBe(20);
     expect(result['THROTTLE_TTL_MS']).toBe(60000);
+    expect(result['AUTH_COOKIE_SECURE']).toBe(true);
   });
 
   it('accepts explicit throttle overrides', () => {
@@ -84,5 +89,37 @@ describe('validateEnvironment', () => {
         THROTTLE_LIMIT: '0',
       }),
     ).toThrow('Invalid positive integer: 0');
+  });
+
+  it('accepts auth token ttl and cookie overrides', () => {
+    const result = validateEnvironment({
+      ACCESS_TOKEN_TTL_SECONDS: '600',
+      REFRESH_TOKEN_TTL_SECONDS: '1209600',
+      AUTH_COOKIE_SAME_SITE: 'none',
+      AUTH_COOKIE_SECURE: 'true',
+      AUTH_COOKIE_DOMAIN: '.example.com',
+    });
+
+    expect(result['ACCESS_TOKEN_TTL_SECONDS']).toBe(600);
+    expect(result['REFRESH_TOKEN_TTL_SECONDS']).toBe(1209600);
+    expect(result['AUTH_COOKIE_SAME_SITE']).toBe('none');
+    expect(result['AUTH_COOKIE_SECURE']).toBe(true);
+    expect(result['AUTH_COOKIE_DOMAIN']).toBe('.example.com');
+  });
+
+  it('rejects invalid auth cookie same-site values', () => {
+    expect(() =>
+      validateEnvironment({
+        AUTH_COOKIE_SAME_SITE: 'invalid',
+      }),
+    ).toThrow('Invalid AUTH_COOKIE_SAME_SITE: invalid');
+  });
+
+  it('rejects invalid booleans', () => {
+    expect(() =>
+      validateEnvironment({
+        AUTH_COOKIE_SECURE: 'yes',
+      }),
+    ).toThrow('Invalid boolean: yes');
   });
 });

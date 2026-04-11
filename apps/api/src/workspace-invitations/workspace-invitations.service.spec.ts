@@ -125,7 +125,7 @@ describe('WorkspaceInvitationsService', () => {
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       workspaceMembership: {
         findUnique: jest.fn(),
@@ -608,6 +608,13 @@ describe('WorkspaceInvitationsService', () => {
     expect(result.status).toBe('active');
   });
 
+  it('rejects invalid-format workspace share-link token lookups before querying storage', async () => {
+    await expect(service.getWorkspaceShareLinkByToken('bad token!')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.workspaceShareLink.findFirst).not.toHaveBeenCalled();
+  });
+
   it('accepts a workspace share link by creating a membership', async () => {
     prisma.workspaceShareLink.findFirst.mockResolvedValueOnce({
       id: 'share-link-1',
@@ -660,6 +667,16 @@ describe('WorkspaceInvitationsService', () => {
       userId: 'user-2',
       role: 'member',
     });
+  });
+
+  it('rejects invalid-format workspace share-link tokens before acceptance lookup', async () => {
+    await expect(
+      service.acceptWorkspaceShareLinkByToken('bad token!', {
+        id: 'user-2',
+        email: 'invitee@example.com',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.workspaceShareLink.findFirst).not.toHaveBeenCalled();
   });
 
   it('returns expiresAt in pending workspace invitation summaries', async () => {
@@ -911,20 +928,23 @@ describe('WorkspaceInvitationsService', () => {
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
       updatedAt: new Date('2026-03-26T00:00:00.000Z'),
     });
-    prisma.workspaceInvitation.update.mockResolvedValueOnce({});
-
     const result = await service.acceptInvitation(invitationId, {
       id: 'user-2',
       email: 'invitee@example.com',
     });
 
-    const updateCall: unknown = prisma.workspaceInvitation.update.mock.calls[0];
+    const updateCall: unknown = prisma.workspaceInvitation.updateMany.mock.calls[0];
 
     expect(updateCall).toBeDefined();
 
     const [updateArgs] = updateCall as [
       {
-        where: { id: string };
+        where: {
+          id: string;
+          acceptedAt: null;
+          revokedAt: null;
+          expiresAt: { gt: Date };
+        };
         data: { acceptedAt: Date };
       },
     ];
@@ -963,8 +983,6 @@ describe('WorkspaceInvitationsService', () => {
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
       updatedAt: new Date('2026-03-26T00:00:00.000Z'),
     });
-    prisma.workspaceInvitation.update.mockResolvedValueOnce({});
-
     await service.acceptInvitation(invitationId, {
       id: 'user-2',
       email: 'invitee@example.com',
@@ -1013,8 +1031,6 @@ describe('WorkspaceInvitationsService', () => {
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
       updatedAt: new Date('2026-03-26T00:00:00.000Z'),
     });
-    prisma.workspaceInvitation.update.mockResolvedValueOnce({});
-
     const result = await service.acceptInvitationByToken('plain-token', {
       id: 'user-2',
       email: 'invitee@example.com',
@@ -1065,6 +1081,16 @@ describe('WorkspaceInvitationsService', () => {
         email: 'invitee@example.com',
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('rejects invalid-format invitation tokens before acceptance lookup', async () => {
+    await expect(
+      service.acceptInvitationByToken('bad token!', {
+        id: 'user-2',
+        email: 'invitee@example.com',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.workspaceInvitation.findUnique).not.toHaveBeenCalled();
   });
 
   it('lists only pending invitations for an email', async () => {
@@ -1246,6 +1272,13 @@ describe('WorkspaceInvitationsService', () => {
     await expect(service.getInvitationByToken('missing-token')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it('rejects invalid-format invitation token lookups before querying storage', async () => {
+    await expect(service.getInvitationByToken('bad token!')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.workspaceInvitation.findUnique).not.toHaveBeenCalled();
   });
 
   it('lookup derives accepted, revoked, and expired statuses and rejects unknown tokens', async () => {

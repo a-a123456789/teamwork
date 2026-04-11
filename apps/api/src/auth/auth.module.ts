@@ -6,6 +6,7 @@ import { MembershipsModule } from '../memberships/memberships.module';
 import { UsersModule } from '../users/users.module';
 import { WorkspacesModule } from '../workspaces/workspaces.module';
 import { AuthController } from './auth.controller';
+import { AuthSessionsService } from './auth-sessions.service';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 
@@ -18,7 +19,7 @@ import { JwtStrategy } from './jwt.strategy';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') ?? 'teamwork-dev-secret-change-me',
         signOptions: {
-          expiresIn: 60 * 15,
+          expiresIn: configService.get<number>('ACCESS_TOKEN_TTL_SECONDS') ?? 60 * 15,
         },
       }),
     }),
@@ -27,7 +28,7 @@ import { JwtStrategy } from './jwt.strategy';
     MembershipsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [AuthService, AuthSessionsService, JwtStrategy],
+  exports: [AuthService, AuthSessionsService],
 })
 export class AuthModule {}

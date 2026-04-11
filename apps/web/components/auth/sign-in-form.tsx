@@ -21,7 +21,7 @@ const INITIAL_VALUES: SignInFormValues = {
 export function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setAccessToken } = useAuthSession();
+  const { refreshSession } = useAuthSession();
   const [values, setValues] = useState(INITIAL_VALUES);
   const [errors, setErrors] = useState<SignInErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,8 +57,8 @@ export function SignInForm() {
     setErrors({});
 
     try {
-      const payload = await login(validation.input);
-      const sessionResult = await setAccessToken(payload.accessToken);
+      await login(validation.input);
+      const sessionResult = await refreshSession();
 
       if (sessionResult.status !== 'authenticated') {
         setErrors({

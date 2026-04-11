@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -158,6 +159,13 @@ type AcceptInvitationLookup =
     };
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+const INVITE_TOKEN_PATTERN = /^[a-zA-Z0-9_-]{8,256}$/;
+
+interface SecurityAuditContext {
+  actorUserId?: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}
 
 function toInvitationDatabase(db: Prisma.TransactionClient | PrismaService): InvitationDatabase {
   return {
@@ -169,6 +177,8 @@ function toInvitationDatabase(db: Prisma.TransactionClient | PrismaService): Inv
 
 @Injectable()
 export class WorkspaceInvitationsService {
+  private readonly logger = new Logger(WorkspaceInvitationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
@@ -253,17 +263,41 @@ export class WorkspaceInvitationsService {
     }));
   }
 
-  async getInvitationByToken(token: string): Promise<PublicWorkspaceInvitationLookup> {
+  async getInvitationByToken(
+    token: string,
+    auditContext: SecurityAuditContext = {},
+  ): Promise<PublicWorkspaceInvitationLookup> {
+    const normalizedToken = normalizePublicToken(token);
+
+    if (!normalizedToken) {
+      this.auditSecurityEvent('invitation.lookup', 'failure', {
+        ...auditContext,
+        reason: 'invalid_token_format',
+      });
+      throw new NotFoundException('Invitation not found.');
+    }
+
     const invitation = await toInvitationDatabase(this.prisma).workspaceInvitation.findUnique({
       where: {
-        tokenHash: createInvitationTokenHash(token),
+        tokenHash: createInvitationTokenHash(normalizedToken),
       },
       select: publicInvitationWithWorkspaceSelect,
     });
 
     if (!invitation) {
+      this.auditSecurityEvent('invitation.lookup', 'failure', {
+        ...auditContext,
+        reason: 'not_found',
+      });
       throw new NotFoundException('Invitation not found.');
     }
+
+    this.auditSecurityEvent('invitation.lookup', 'success', {
+      ...auditContext,
+      invitationId: invitation.id,
+      workspaceId: invitation.workspaceId,
+      status: this.toPublicStatus(invitation),
+    });
 
     return {
       invitation: this.toPublicSummary(invitation),
@@ -410,21 +444,72 @@ export class WorkspaceInvitationsService {
   async acceptInvitationByToken(
     token: string,
     user: Pick<RequestUser, 'id' | 'email'>,
+    auditContext: SecurityAuditContext = {},
   ): Promise<{ membership: ReturnType<MembershipsService['toDetail']> }> {
-    return this.acceptInvitationWithLookup({ token }, user);
+    const normalizedToken = normalizePublicToken(token);
+
+    if (!normalizedToken) {
+      this.auditSecurityEvent('invitation.accept', 'failure', {
+        ...auditContext,
+        actorUserId: user.id,
+        reason: 'invalid_token_format',
+      });
+      throw new NotFoundException('Invitation not found.');
+    }
+
+    try {
+      const result = await this.acceptInvitationWithLookup({ token: normalizedToken }, user);
+      this.auditSecurityEvent('invitation.accept', 'success', {
+        ...auditContext,
+        actorUserId: user.id,
+        workspaceId: result.membership.workspaceId,
+      });
+      return result;
+    } catch (error) {
+      this.auditSecurityEvent('invitation.accept', 'failure', {
+        ...auditContext,
+        actorUserId: user.id,
+        reason: error instanceof Error ? error.message : 'unknown_error',
+      });
+      throw error;
+    }
   }
 
-  async getWorkspaceShareLinkByToken(token: string): Promise<PublicWorkspaceShareLinkLookup> {
+  async getWorkspaceShareLinkByToken(
+    token: string,
+    auditContext: SecurityAuditContext = {},
+  ): Promise<PublicWorkspaceShareLinkLookup> {
+    const normalizedToken = normalizePublicToken(token);
+
+    if (!normalizedToken) {
+      this.auditSecurityEvent('share_link.lookup', 'failure', {
+        ...auditContext,
+        reason: 'invalid_token_format',
+      });
+      throw new NotFoundException('Workspace share link not found.');
+    }
+
     const shareLink = await toInvitationDatabase(this.prisma).workspaceShareLink.findFirst({
       where: {
-        tokenHash: createInvitationTokenHash(token),
+        tokenHash: createInvitationTokenHash(normalizedToken),
       },
       select: workspaceShareLinkWithWorkspaceSelect,
     });
 
     if (!shareLink) {
+      this.auditSecurityEvent('share_link.lookup', 'failure', {
+        ...auditContext,
+        reason: 'not_found',
+      });
       throw new NotFoundException('Workspace share link not found.');
     }
+
+    this.auditSecurityEvent('share_link.lookup', 'success', {
+      ...auditContext,
+      workspaceId: shareLink.workspaceId,
+      shareLinkId: shareLink.id,
+      status: this.toWorkspaceShareLinkStatus(shareLink),
+    });
 
     return {
       shareLink: this.toPublicWorkspaceShareLinkSummary(shareLink),
@@ -436,19 +521,51 @@ export class WorkspaceInvitationsService {
   async acceptWorkspaceShareLinkByToken(
     token: string,
     user: Pick<RequestUser, 'id' | 'email'>,
+    auditContext: SecurityAuditContext = {},
   ): Promise<{ membership: ReturnType<MembershipsService['toDetail']> }> {
+    const normalizedToken = normalizePublicToken(token);
+
+    if (!normalizedToken) {
+      this.auditSecurityEvent('share_link.accept', 'failure', {
+        ...auditContext,
+        actorUserId: user.id,
+        reason: 'invalid_token_format',
+      });
+      throw new NotFoundException('Workspace share link not found.');
+    }
+
     const shareLink = await toInvitationDatabase(this.prisma).workspaceShareLink.findFirst({
       where: {
-        tokenHash: createInvitationTokenHash(token),
+        tokenHash: createInvitationTokenHash(normalizedToken),
       },
       select: workspaceShareLinkSummarySelect,
     });
 
     if (!shareLink) {
+      this.auditSecurityEvent('share_link.accept', 'failure', {
+        ...auditContext,
+        actorUserId: user.id,
+        reason: 'not_found',
+      });
       throw new NotFoundException('Workspace share link not found.');
     }
 
-    return this.acceptWorkspaceShareLink(shareLink, user);
+    try {
+      const result = await this.acceptWorkspaceShareLink(shareLink, user);
+      this.auditSecurityEvent('share_link.accept', 'success', {
+        ...auditContext,
+        actorUserId: user.id,
+        workspaceId: result.membership.workspaceId,
+      });
+      return result;
+    } catch (error) {
+      this.auditSecurityEvent('share_link.accept', 'failure', {
+        ...auditContext,
+        actorUserId: user.id,
+        reason: error instanceof Error ? error.message : 'unknown_error',
+      });
+      throw error;
+    }
   }
 
   private async acceptInvitationWithLookup(
@@ -859,11 +976,22 @@ export class WorkspaceInvitationsService {
       tx,
     );
 
-    await tx.workspaceInvitation.update({
-      where: { id: invitation.id },
-      data: { acceptedAt: new Date() },
-      select: invitationSummarySelect,
+    const acceptedAt = new Date();
+    const updateResult = await tx.workspaceInvitation.updateMany({
+      where: {
+        id: invitation.id,
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: {
+          gt: acceptedAt,
+        },
+      },
+      data: { acceptedAt },
     });
+
+    if (updateResult.count !== 1) {
+      throw new ConflictException('Invitation has already been accepted.');
+    }
 
     const currentUser = await this.usersService.getByIdOrThrow(user.id, tx);
 
@@ -899,6 +1027,21 @@ export class WorkspaceInvitationsService {
       throw new ConflictException('Workspace share link has expired.');
     }
   }
+
+  private auditSecurityEvent(
+    eventName: string,
+    outcome: 'success' | 'failure',
+    details: Record<string, unknown>,
+  ): void {
+    this.logger.log(
+      JSON.stringify({
+        eventName,
+        outcome,
+        category: 'security',
+        ...details,
+      }),
+    );
+  }
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
@@ -911,4 +1054,14 @@ function createInvitationToken(): string {
 
 function createInvitationTokenHash(token: string): string {
   return createHash('sha256').update(token).digest('hex');
+}
+
+function normalizePublicToken(token: string): string | null {
+  const normalizedToken = token.trim();
+
+  if (!INVITE_TOKEN_PATTERN.test(normalizedToken)) {
+    return null;
+  }
+
+  return normalizedToken;
 }

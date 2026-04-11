@@ -6,7 +6,10 @@ const DEFAULT_SHARE_LINK_TTL_DAYS = 14;
 const DEFAULT_THROTTLE_TTL_MS = 60_000;
 const DEFAULT_DEVELOPMENT_THROTTLE_LIMIT = 500;
 const DEFAULT_PRODUCTION_THROTTLE_LIMIT = 20;
+const DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
+const DEFAULT_REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 type NodeEnvironment = 'development' | 'test' | 'production';
+type AuthCookieSameSite = 'strict' | 'lax' | 'none';
 
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {
   const appUrl = readUrl(config['APP_URL']) ?? DEFAULT_APP_URL;
@@ -27,6 +30,15 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     THROTTLE_LIMIT:
       readPositiveInteger(config['THROTTLE_LIMIT']) ??
       resolveDefaultThrottleLimitForEnvironment(nodeEnv),
+    ACCESS_TOKEN_TTL_SECONDS:
+      readPositiveInteger(config['ACCESS_TOKEN_TTL_SECONDS']) ?? DEFAULT_ACCESS_TOKEN_TTL_SECONDS,
+    REFRESH_TOKEN_TTL_SECONDS:
+      readPositiveInteger(config['REFRESH_TOKEN_TTL_SECONDS']) ??
+      DEFAULT_REFRESH_TOKEN_TTL_SECONDS,
+    AUTH_COOKIE_SAME_SITE: readAuthCookieSameSite(config['AUTH_COOKIE_SAME_SITE']) ?? 'lax',
+    AUTH_COOKIE_SECURE:
+      readBoolean(config['AUTH_COOKIE_SECURE']) ?? (nodeEnv === 'production' ? true : false),
+    AUTH_COOKIE_DOMAIN: readString(config['AUTH_COOKIE_DOMAIN']),
     PORT: Number.parseInt(readString(config['PORT']) ?? '3000', 10),
   };
 }
@@ -81,6 +93,42 @@ function readNodeEnvironment(value: unknown): NodeEnvironment | undefined {
 
 function isNodeEnvironment(value: string): value is NodeEnvironment {
   return value === 'development' || value === 'test' || value === 'production';
+}
+
+function readBoolean(value: unknown): boolean | undefined {
+  const normalizedValue = readString(value);
+
+  if (!normalizedValue) {
+    return undefined;
+  }
+
+  if (normalizedValue === 'true') {
+    return true;
+  }
+
+  if (normalizedValue === 'false') {
+    return false;
+  }
+
+  throw new Error(`Invalid boolean: ${normalizedValue}`);
+}
+
+function readAuthCookieSameSite(value: unknown): AuthCookieSameSite | undefined {
+  const normalizedValue = readString(value);
+
+  if (!normalizedValue) {
+    return undefined;
+  }
+
+  if (
+    normalizedValue === 'strict' ||
+    normalizedValue === 'lax' ||
+    normalizedValue === 'none'
+  ) {
+    return normalizedValue;
+  }
+
+  throw new Error(`Invalid AUTH_COOKIE_SAME_SITE: ${normalizedValue}`);
 }
 
 function resolveDefaultThrottleLimitForEnvironment(nodeEnv: NodeEnvironment): number {

@@ -4,10 +4,10 @@ import type { AuthMeResponse } from '@teamwork/types';
 import type * as ApiClientModule from '@/lib/api/client';
 import { ApiError, deleteWorkspace, getAuthMe } from '@/lib/api/client';
 import { DeleteWorkspaceDialog } from '@/components/workspaces/delete-workspace-dialog';
-import { useAuthSession } from '@/lib/auth/auth-session-provider';
+import { type AuthSessionResult, useAuthSession } from '@/lib/auth/auth-session-provider';
 
 const mockReplace = jest.fn();
-const mockRefreshSession = jest.fn<Promise<void>, []>();
+const mockRefreshSession = jest.fn<Promise<AuthSessionResult>, []>();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -82,7 +82,22 @@ describe('DeleteWorkspaceDialog', () => {
   beforeEach(() => {
     mockReplace.mockReset();
     mockRefreshSession.mockReset();
-    mockRefreshSession.mockResolvedValue();
+    mockRefreshSession.mockResolvedValue({
+      status: 'authenticated',
+      auth: {
+        user: {
+          id: 'user-1',
+          email: 'owner@example.com',
+          displayName: 'Owner',
+          createdAt: '2026-04-09T00:00:00.000Z',
+          updatedAt: '2026-04-09T00:00:00.000Z',
+        },
+        workspaces: [],
+        activeWorkspace: null,
+      },
+      accessToken: 'token-123',
+      errorMessage: null,
+    });
     mockedDeleteWorkspace.mockReset();
     mockedGetAuthMe.mockReset();
     mockedUseAuthSession.mockReturnValue(createSession());

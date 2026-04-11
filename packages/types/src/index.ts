@@ -234,6 +234,7 @@ export interface UserInvitationsResponse {
 
 export interface JwtAccessTokenPayload {
   sub: ID;
+  sessionId: ID;
   email: string;
   displayName: string;
   createdAt: string;
