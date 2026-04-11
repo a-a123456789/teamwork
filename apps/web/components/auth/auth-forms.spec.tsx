@@ -87,13 +87,16 @@ function buildAuth(workspaceId = 'workspace-1'): AuthMeResponse {
 function configureSessionMock(
   refreshResult: Awaited<ReturnType<ReturnType<typeof useAuthSession>['refreshSession']>>,
 ) {
+  const refreshSession = jest.fn().mockResolvedValue(refreshResult);
+  const setAccessToken = jest.fn().mockResolvedValue(refreshResult);
+
   mockedUseAuthSession.mockReturnValue({
     status: 'authenticated',
     auth: buildAuth(),
     accessToken: 'token-123',
     errorMessage: null,
-    refreshSession: jest.fn().mockResolvedValue(refreshResult),
-    setAccessToken: jest.fn(),
+    refreshSession,
+    setAccessToken,
     clearSession: jest.fn(),
   });
 }

@@ -9,6 +9,20 @@ export function getLegacyStoredAccessToken(): string | null {
   return token && token.trim().length > 0 ? token : null;
 }
 
+export function setLegacyStoredAccessToken(token: string): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const normalizedToken = token.trim();
+
+  if (normalizedToken.length === 0) {
+    return;
+  }
+
+  window.localStorage.setItem(LEGACY_ACCESS_TOKEN_STORAGE_KEY, normalizedToken);
+}
+
 export function clearLegacyStoredAccessToken(): void {
   if (typeof window === 'undefined') {
     return;

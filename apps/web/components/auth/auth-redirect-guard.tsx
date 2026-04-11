@@ -18,7 +18,7 @@ export function AuthRedirectGuard({ children }: { children: ReactNode }) {
 
     const nextPath = searchParams.get('next');
 
-    if (isSafeInternalPath(nextPath)) {
+    if (isSafePostAuthPath(nextPath)) {
       router.replace(nextPath);
       return;
     }
@@ -73,6 +73,10 @@ export function AuthRedirectGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function isSafeInternalPath(value: string | null): value is string {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//');
+function isSafePostAuthPath(value: string | null): value is string {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) {
+    return false;
+  }
+
+  return !value.startsWith('/auth-required') && !value.startsWith('/sign-up');
 }

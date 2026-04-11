@@ -14,6 +14,7 @@ import { COOKIE_SESSION_MARKER_PREFIX } from '@/lib/auth/session-constants';
 import {
   clearLegacyStoredAccessToken,
   getLegacyStoredAccessToken,
+  setLegacyStoredAccessToken,
 } from '@/lib/auth/session';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
@@ -100,6 +101,13 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         setStatus('loading');
         setErrorMessage(null);
         const nextState = await resolveSessionState(token);
+        if (
+          nextState.status === 'authenticated' &&
+          nextState.accessToken &&
+          !isCookieSessionMarker(nextState.accessToken)
+        ) {
+          setLegacyStoredAccessToken(nextState.accessToken);
+        }
         applyResolvedSessionState(nextState, {
           setStatus,
           setAuth,

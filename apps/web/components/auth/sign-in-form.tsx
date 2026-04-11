@@ -21,7 +21,7 @@ const INITIAL_VALUES: SignInFormValues = {
 export function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refreshSession } = useAuthSession();
+  const { refreshSession, setAccessToken } = useAuthSession();
   const [values, setValues] = useState(INITIAL_VALUES);
   const [errors, setErrors] = useState<SignInErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,8 +57,10 @@ export function SignInForm() {
     setErrors({});
 
     try {
-      await login(validation.input);
-      const sessionResult = await refreshSession();
+      const result = await login(validation.input);
+      const sessionResult = result.accessToken
+        ? await setAccessToken(result.accessToken)
+        : await refreshSession();
 
       if (sessionResult.status !== 'authenticated') {
         setErrors({
@@ -71,7 +73,7 @@ export function SignInForm() {
 
       const nextPath = searchParams.get('next');
 
-      if (nextPath) {
+      if (isSafePostAuthPath(nextPath)) {
         router.replace(nextPath);
         return;
       }
@@ -125,4 +127,12 @@ export function SignInForm() {
       {errors.form ? <AuthFormError message={errors.form} /> : null}
     </form>
   );
+}
+
+function isSafePostAuthPath(value: string | null): value is string {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) {
+    return false;
+  }
+
+  return !value.startsWith('/auth-required') && !value.startsWith('/sign-up');
 }
