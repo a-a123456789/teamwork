@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
-test('workspace deletion smoke', async ({ page, request }) => {
+test('@smoke workspace deletion smoke', async ({ page, request }) => {
   test.setTimeout(120000);
 
   const ownerEmail = createUniqueEmail('workspace-delete');
@@ -20,7 +20,7 @@ test('workspace deletion smoke', async ({ page, request }) => {
   await page.goto('/');
 
   await expect(page).toHaveURL(/\/workspaces\/[^/]+\/board$/, { timeout: 30000 });
-  await page.getByRole('button', { name: 'Delete' }).click();
+  await page.getByTestId('delete-workspace-trigger').click();
   await expect(page.getByRole('dialog', { name: 'Delete workspace' })).toBeVisible();
   await page.getByRole('button', { name: 'Delete Workspace' }).click();
 
@@ -37,7 +37,7 @@ async function registerUser(
     password: string;
   },
 ) {
-  const response = await request.post('http://127.0.0.1:3000/auth/register', {
+  const response = await request.post('http://localhost:3000/auth/register', {
     data: {
       displayName: input.name,
       email: input.email,

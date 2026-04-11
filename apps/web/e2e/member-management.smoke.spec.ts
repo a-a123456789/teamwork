@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
-test('member management smoke', async ({ browser, page }) => {
+test('@smoke member management smoke', async ({ browser, page, request }) => {
   test.setTimeout(120000);
 
   const ownerEmail = createUniqueEmail('owner');
@@ -41,22 +41,12 @@ test('member management smoke', async ({ browser, page }) => {
   await page.getByRole('button', { name: 'Invite Member' }).click();
   await expect(page.getByText(`Invitation created for ${memberEmail}`)).toBeVisible();
 
-  await expect
-    .poll(
-      () => memberPage.evaluate(() => window.localStorage.getItem('teamwork.accessToken')),
-      { timeout: 10000 },
-    )
-    .not.toBeNull();
+  const memberAccessToken = await loginUser(request, {
+    email: memberEmail,
+    password,
+  });
 
-  const memberAccessToken = await memberPage.evaluate(() =>
-    window.localStorage.getItem('teamwork.accessToken'),
-  );
-
-  if (!memberAccessToken) {
-    throw new Error('Expected member access token after sign-up.');
-  }
-
-  const invitationId = await readInvitationId(memberAccessToken, `${ownerName}'s Workspace`);
+  const invitationId = await readInvitationId(memberAccessToken, workspaceId);
   await acceptInvitation(invitationId, memberAccessToken);
 
   await page.goto(`/workspaces/${workspaceId}/members`);
@@ -95,8 +85,33 @@ function createUniqueEmail(prefix: string): string {
   return `${prefix}-${suffix}@example.com`;
 }
 
-async function readInvitationId(accessToken: string, workspaceName: string): Promise<string> {
-  const response = await fetch('http://127.0.0.1:3000/users/me/invitations', {
+async function loginUser(
+  request: APIRequestContext,
+  input: {
+    email: string;
+    password: string;
+  },
+): Promise<string> {
+  const response = await request.post('http://localhost:3000/auth/login', {
+    data: {
+      email: input.email,
+      password: input.password,
+    },
+  });
+
+  expect(response.ok()).toBeTruthy();
+
+  const data = (await response.json()) as { accessToken?: string };
+
+  if (typeof data.accessToken !== 'string' || data.accessToken.length === 0) {
+    throw new Error('Expected access token from login response.');
+  }
+
+  return data.accessToken;
+}
+
+async function readInvitationId(accessToken: string, workspaceId: string): Promise<string> {
+  const response = await fetch('http://localhost:3000/users/me/invitations', {
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${accessToken}`,
@@ -110,15 +125,15 @@ async function readInvitationId(accessToken: string, workspaceName: string): Pro
   const data = (await response.json()) as {
     invitations?: Array<{
       invitation?: { id?: string };
-      workspace?: { name?: string };
+      workspace?: { id?: string };
     }>;
   };
   const invitation = data.invitations?.find(
-    (item) => item.workspace?.name === workspaceName && typeof item.invitation?.id === 'string',
+    (item) => item.workspace?.id === workspaceId && typeof item.invitation?.id === 'string',
   );
 
   if (!invitation?.invitation?.id) {
-    throw new Error(`Expected invitation for ${workspaceName}.`);
+    throw new Error(`Expected invitation for workspace ${workspaceId}.`);
   }
 
   return invitation.invitation.id;
@@ -126,7 +141,7 @@ async function readInvitationId(accessToken: string, workspaceName: string): Pro
 
 async function acceptInvitation(invitationId: string, accessToken: string): Promise<void> {
   const response = await fetch(
-    `http://127.0.0.1:3000/workspaces/invitations/${invitationId}/accept`,
+    `http://localhost:3000/workspaces/invitations/${invitationId}/accept`,
     {
       method: 'POST',
       headers: {
