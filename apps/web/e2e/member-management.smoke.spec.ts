@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
-test('@smoke member management smoke', async ({ browser, page }) => {
+test('@smoke member management smoke', async ({ browser, page, request }) => {
   test.setTimeout(120000);
 
   const ownerEmail = createUniqueEmail('owner');
@@ -41,20 +41,10 @@ test('@smoke member management smoke', async ({ browser, page }) => {
   await page.getByRole('button', { name: 'Invite Member' }).click();
   await expect(page.getByText(`Invitation created for ${memberEmail}`)).toBeVisible();
 
-  await expect
-    .poll(
-      () => memberPage.evaluate(() => window.localStorage.getItem('teamwork.accessToken')),
-      { timeout: 10000 },
-    )
-    .not.toBeNull();
-
-  const memberAccessToken = await memberPage.evaluate(() =>
-    window.localStorage.getItem('teamwork.accessToken'),
-  );
-
-  if (!memberAccessToken) {
-    throw new Error('Expected member access token after sign-up.');
-  }
+  const memberAccessToken = await loginUser(request, {
+    email: memberEmail,
+    password,
+  });
 
   const invitationId = await readInvitationId(memberAccessToken, workspaceId);
   await acceptInvitation(invitationId, memberAccessToken);
@@ -93,6 +83,31 @@ function createUniqueEmail(prefix: string): string {
   const suffix = `${String(Date.now())}-${Math.random().toString(16).slice(2, 8)}`;
 
   return `${prefix}-${suffix}@example.com`;
+}
+
+async function loginUser(
+  request: APIRequestContext,
+  input: {
+    email: string;
+    password: string;
+  },
+): Promise<string> {
+  const response = await request.post('http://localhost:3000/auth/login', {
+    data: {
+      email: input.email,
+      password: input.password,
+    },
+  });
+
+  expect(response.ok()).toBeTruthy();
+
+  const data = (await response.json()) as { accessToken?: string };
+
+  if (typeof data.accessToken !== 'string' || data.accessToken.length === 0) {
+    throw new Error('Expected access token from login response.');
+  }
+
+  return data.accessToken;
 }
 
 async function readInvitationId(accessToken: string, workspaceId: string): Promise<string> {
