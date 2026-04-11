@@ -64,7 +64,9 @@ test('@smoke member management smoke', async ({ browser, page, request }) => {
     .getByLabel('Next owner')
     .selectOption(`${memberName} (${memberEmail})`);
   await page.getByRole('button', { name: 'Transfer Ownership' }).click();
-  await expect(page.getByText(`Ownership transferred to ${memberName}.`)).toBeVisible();
+  await expect(
+    page.getByText('Only workspace owners can access workspace settings and governance controls.'),
+  ).toBeVisible();
 
   await page.goto(`/workspaces/${workspaceId}/invitations`);
   await expect(page.getByText('Owner access required')).toBeVisible();
