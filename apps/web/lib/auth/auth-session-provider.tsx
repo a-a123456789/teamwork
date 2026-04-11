@@ -9,11 +9,11 @@ import {
   type ReactNode,
 } from 'react';
 import type { AuthMeResponse } from '@teamwork/types';
-import { ApiError, getAuthMe } from '@/lib/api/client';
+import { ApiError, getAuthMe, logoutAuthSession, refreshAuthSession } from '@/lib/api/client';
+import { COOKIE_SESSION_MARKER_PREFIX } from '@/lib/auth/session-constants';
 import {
-  clearStoredAccessToken,
-  getStoredAccessToken,
-  setStoredAccessToken,
+  clearLegacyStoredAccessToken,
+  getLegacyStoredAccessToken,
 } from '@/lib/auth/session';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
@@ -30,7 +30,7 @@ interface AuthSessionContextValue {
   auth: AuthMeResponse;
   accessToken: string | null;
   errorMessage: string | null;
-  refreshSession: () => Promise<void>;
+  refreshSession: () => Promise<AuthSessionResult>;
   setAccessToken: (token: string) => Promise<AuthSessionResult>;
   clearSession: () => void;
 }
@@ -85,16 +85,18 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
       refreshSession: async () => {
         setStatus('loading');
         setErrorMessage(null);
-        const nextState = await resolveSessionState(accessToken);
+        const nextState = await resolveSessionState(
+          accessToken && !isCookieSessionMarker(accessToken) ? accessToken : null,
+        );
         applyResolvedSessionState(nextState, {
           setStatus,
           setAuth,
           setAccessTokenState,
           setErrorMessage,
         });
+        return nextState;
       },
       setAccessToken: async (token: string) => {
-        setStoredAccessToken(token);
         setStatus('loading');
         setErrorMessage(null);
         const nextState = await resolveSessionState(token);
@@ -107,7 +109,10 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
         return nextState;
       },
       clearSession: () => {
-        clearStoredAccessToken();
+        void logoutAuthSession().catch(() => {
+          // Best effort cleanup only.
+        });
+        clearLegacyStoredAccessToken();
         setAuth(EMPTY_AUTH);
         setAccessTokenState(null);
         setErrorMessage(null);
@@ -121,30 +126,57 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
 }
 
 async function resolveSessionState(tokenOverride?: string | null): Promise<AuthSessionResult> {
-  const token = tokenOverride ?? getStoredAccessToken();
+  const legacyToken = tokenOverride ?? getLegacyStoredAccessToken();
 
-  if (!token) {
-    return {
-      status: 'unauthenticated',
-      auth: EMPTY_AUTH,
-      accessToken: null,
-      errorMessage: null,
-    };
+  if (legacyToken) {
+    try {
+      const nextAuth = await getAuthMe(legacyToken);
+      return {
+        status: 'authenticated',
+        auth: nextAuth,
+        accessToken: legacyToken,
+        errorMessage: null,
+      };
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        clearLegacyStoredAccessToken();
+      } else {
+        return {
+          status: 'error',
+          auth: EMPTY_AUTH,
+          accessToken: legacyToken,
+          errorMessage: error instanceof Error ? error.message : 'Session request failed.',
+        };
+      }
+    }
   }
 
   try {
-    // Ensure SSR-aware auth cookie stays aligned with localStorage token for future server renders.
-    setStoredAccessToken(token);
-    const nextAuth = await getAuthMe(token);
+    const nextAuth = await getAuthMe();
     return {
       status: 'authenticated',
       auth: nextAuth,
-      accessToken: token,
+      accessToken: buildCookieSessionMarker(nextAuth),
       errorMessage: null,
     };
   } catch (error) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-      clearStoredAccessToken();
+      const refreshed = await refreshAuthSession();
+
+      if (refreshed) {
+        try {
+          const nextAuth = await getAuthMe();
+          return {
+            status: 'authenticated',
+            auth: nextAuth,
+            accessToken: buildCookieSessionMarker(nextAuth),
+            errorMessage: null,
+          };
+        } catch {
+          // Fall through to unauthenticated below.
+        }
+      }
+
       return {
         status: 'unauthenticated',
         auth: EMPTY_AUTH,
@@ -156,7 +188,7 @@ async function resolveSessionState(tokenOverride?: string | null): Promise<AuthS
     return {
       status: 'error',
       auth: EMPTY_AUTH,
-      accessToken: token,
+      accessToken: null,
       errorMessage: error instanceof Error ? error.message : 'Session request failed.',
     };
   }
@@ -185,4 +217,12 @@ export function useAuthSession(): AuthSessionContextValue {
   }
 
   return value;
+}
+
+function buildCookieSessionMarker(auth: AuthMeResponse): string {
+  return `${COOKIE_SESSION_MARKER_PREFIX}:${auth.user.id}:${auth.user.updatedAt}`;
+}
+
+function isCookieSessionMarker(token: string): boolean {
+  return token.startsWith(`${COOKIE_SESSION_MARKER_PREFIX}:`);
 }

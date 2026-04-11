@@ -78,6 +78,11 @@ describe('WorkspaceInvitationsController', () => {
     expect(workspaceInvitationsService.acceptInvitationByToken).toHaveBeenCalledWith(
       'plain-token',
       user,
+      {
+        actorUserId: user.id,
+        ipAddress: null,
+        userAgent: null,
+      },
     );
   });
 
@@ -94,6 +99,11 @@ describe('WorkspaceInvitationsController', () => {
     expect(workspaceInvitationsService.acceptWorkspaceShareLinkByToken).toHaveBeenCalledWith(
       'share-token',
       user,
+      {
+        actorUserId: user.id,
+        ipAddress: null,
+        userAgent: null,
+      },
     );
   });
 

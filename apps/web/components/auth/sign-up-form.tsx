@@ -23,7 +23,7 @@ const INITIAL_VALUES: SignUpFormValues = {
 export function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setAccessToken } = useAuthSession();
+  const { refreshSession } = useAuthSession();
   const [values, setValues] = useState(INITIAL_VALUES);
   const [errors, setErrors] = useState<SignUpErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,8 +59,8 @@ export function SignUpForm() {
     setErrors({});
 
     try {
-      const payload = await register(validation.input);
-      const sessionResult = await setAccessToken(payload.accessToken);
+      await register(validation.input);
+      const sessionResult = await refreshSession();
 
       if (sessionResult.status !== 'authenticated') {
         setErrors({

@@ -162,6 +162,7 @@ export interface RegisterResponse extends AuthPayload {
 
 export interface JwtAccessTokenPayload {
   sub: ID;
+  sessionId: ID;
   email: string;
   displayName: string;
   createdAt: string;

@@ -6,6 +6,7 @@ import { MembershipsService } from '../memberships/memberships.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
+import { AuthSessionsService } from './auth-sessions.service';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
@@ -50,6 +51,13 @@ describe('AuthService', () => {
 
   let prisma: { $transaction: jest.Mock };
   let jwtService: { signAsync: jest.Mock; verifyAsync: jest.Mock };
+  let authSessionsService: {
+    createSession: jest.Mock;
+    rotateSession: jest.Mock;
+    revokeSessionById: jest.Mock;
+    revokeSessionByRefreshToken: jest.Mock;
+    revokeAllSessionsForUser: jest.Mock;
+  };
   let usersService: { findByEmail: jest.Mock; createUser: jest.Mock; toSummary: jest.Mock; getByIdOrThrow: jest.Mock };
   let workspacesService: {
     createWorkspace: jest.Mock;
@@ -66,6 +74,16 @@ describe('AuthService', () => {
     jwtService = {
       signAsync: jest.fn().mockResolvedValue('signed-token'),
       verifyAsync: jest.fn(),
+    };
+    authSessionsService = {
+      createSession: jest.fn().mockResolvedValue({
+        sessionId: 'session-1',
+        refreshToken: 'refresh-token',
+      }),
+      rotateSession: jest.fn(),
+      revokeSessionById: jest.fn(),
+      revokeSessionByRefreshToken: jest.fn(),
+      revokeAllSessionsForUser: jest.fn(),
     };
     usersService = {
       findByEmail: jest.fn(),
@@ -88,6 +106,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: PrismaService, useValue: prisma },
         { provide: JwtService, useValue: jwtService },
+        { provide: AuthSessionsService, useValue: authSessionsService },
         { provide: UsersService, useValue: usersService },
         { provide: WorkspacesService, useValue: workspacesService },
         { provide: MembershipsService, useValue: membershipsService },
@@ -133,9 +152,13 @@ describe('AuthService', () => {
         expect.anything(),
       );
       expect(result.accessToken).toBe('signed-token');
+      expect(result.refreshToken).toBe('refresh-token');
+      expect(result.sessionId).toBe('session-1');
+      expect(authSessionsService.createSession).toHaveBeenCalledWith('user-1', {});
       expect(result.user).toEqual(userSummary);
       expect(jwtService.signAsync).toHaveBeenCalledWith({
         sub: userSummary.id,
+        sessionId: 'session-1',
         email: userSummary.email,
         displayName: userSummary.displayName,
         createdAt: userSummary.createdAt,
@@ -268,6 +291,8 @@ describe('AuthService', () => {
       });
 
       expect(result.accessToken).toBe('signed-token');
+      expect(result.refreshToken).toBe('refresh-token');
+      expect(result.sessionId).toBe('session-1');
       expect(result.user).toEqual(userSummary);
       expect(result.workspaces).toEqual([authenticatedWorkspace]);
     });
@@ -326,6 +351,7 @@ describe('AuthService', () => {
     it('returns the decoded payload on a valid token', async () => {
       const decoded = {
         sub: 'user-1',
+        sessionId: 'session-1',
         email: 'alice@example.com',
         displayName: 'Alice',
         createdAt: nowIso,
@@ -344,6 +370,67 @@ describe('AuthService', () => {
       jwtService.verifyAsync.mockRejectedValueOnce(new Error('invalid signature'));
 
       await expect(service.verifyAccessToken('bad-token')).rejects.toThrow('invalid signature');
+    });
+  });
+
+  describe('session lifecycle', () => {
+    it('refreshSession rotates refresh token and signs a new access token', async () => {
+      authSessionsService.rotateSession.mockResolvedValueOnce({
+        userId: 'user-1',
+        sessionId: 'session-2',
+        refreshToken: 'next-refresh-token',
+      });
+      usersService.getByIdOrThrow.mockResolvedValueOnce(dbUser);
+
+      const result = await service.refreshSession('refresh-token');
+
+      expect(authSessionsService.rotateSession).toHaveBeenCalledWith('refresh-token', {});
+      expect(jwtService.signAsync).toHaveBeenCalledWith({
+        sub: 'user-1',
+        sessionId: 'session-2',
+        email: 'alice@example.com',
+        displayName: 'Alice',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        type: 'access',
+      });
+      expect(result).toEqual({
+        accessToken: 'signed-token',
+        refreshToken: 'next-refresh-token',
+        sessionId: 'session-2',
+      });
+    });
+
+    it('logout revokes both access and refresh token sessions when present', async () => {
+      jwtService.verifyAsync.mockResolvedValueOnce({
+        sub: 'user-1',
+        sessionId: 'session-1',
+        email: 'alice@example.com',
+        displayName: 'Alice',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        type: 'access',
+      });
+
+      await service.logout({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      });
+
+      expect(authSessionsService.revokeSessionById).toHaveBeenCalledWith('session-1', 'logout');
+      expect(authSessionsService.revokeSessionByRefreshToken).toHaveBeenCalledWith(
+        'refresh-token',
+        'logout',
+      );
+    });
+
+    it('logoutAll revokes all active sessions for a user', async () => {
+      await service.logoutAll('user-1');
+
+      expect(authSessionsService.revokeAllSessionsForUser).toHaveBeenCalledWith(
+        'user-1',
+        'logout_all',
+      );
     });
   });
 });

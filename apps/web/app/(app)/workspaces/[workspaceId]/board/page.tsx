@@ -1,7 +1,4 @@
 import type { WorkspaceBoardDataResponse } from '@teamwork/types';
-import { cookies } from 'next/headers';
-import { ApiError, getWorkspaceBoardData } from '@/lib/api/client';
-import { ACCESS_TOKEN_COOKIE_KEY } from '@/lib/auth/session-constants';
 import { readWorkspaceIdFromParams } from '@/lib/route-params';
 import { WorkspaceBoardPageClient } from './workspace-board-page-client';
 
@@ -29,21 +26,6 @@ export default async function WorkspaceBoardPage({
 async function loadInitialBoardData(
   workspaceId: string,
 ): Promise<WorkspaceBoardDataResponse | null> {
-  const accessToken = (await cookies()).get(ACCESS_TOKEN_COOKIE_KEY)?.value ?? null;
-
-  if (!accessToken) {
-    return null;
-  }
-
-  try {
-    return await getWorkspaceBoardData(workspaceId, accessToken, {
-      includeMembers: false,
-    });
-  } catch (error) {
-    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-      return null;
-    }
-
-    return null;
-  }
+  void workspaceId;
+  return null;
 }
