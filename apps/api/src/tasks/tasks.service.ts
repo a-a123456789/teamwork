@@ -67,6 +67,8 @@ type TaskListRecord = Prisma.TaskGetPayload<{
   select: typeof taskListSelect;
 }>;
 
+type JsonObject = Record<string, unknown>;
+
 interface ListTasksForWorkspaceInput extends TaskListFilters {
   workspaceId: string;
   currentUserId: string;
@@ -151,7 +153,7 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
-    await redis.flushall();
+    await this.invalidateTaskListCaches();
 
     return this.toDetails(task);
   }
@@ -176,11 +178,19 @@ export class TasksService {
   }
 
   private async listTasks(input: ListTasksForUserInput): Promise<TaskListResponse> {
-    const cacheKey = `tasks:${JSON.stringify(input)}`;
+    const cacheKey = this.buildTaskListCacheKey(input);
 
     const cached = await redis.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached) as TaskListResponse;
+    if (typeof cached === 'string') {
+      try {
+        const parsed = JSON.parse(cached) as unknown;
+
+        if (isTaskListResponse(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // Treat malformed cache entries as misses and continue to the database query.
+      }
     }
 
     const limit = this.resolveTaskListLimit(input.limit);
@@ -271,7 +281,7 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
-    await redis.flushall();
+    await this.invalidateTaskListCaches();
 
     return this.toDetails(task);
   }
@@ -285,7 +295,7 @@ export class TasksService {
         where: { id: taskId },
       });
 
-      await redis.flushall();
+      await this.invalidateTaskListCaches();
 
       this.securityTelemetryService.record({
         category: 'destructive',
@@ -328,7 +338,7 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
-    await redis.flushall();
+    await this.invalidateTaskListCaches();
 
     return this.toDetails(task);
   }
@@ -350,7 +360,7 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
-    await redis.flushall();
+    await this.invalidateTaskListCaches();
 
     return this.toDetails(task);
   }
@@ -600,6 +610,32 @@ export class TasksService {
     return Math.min(Math.max(requestedLimit, 1), MAX_TASK_LIST_RESULTS);
   }
 
+  private buildTaskListCacheKey(input: ListTasksForUserInput): string {
+    const limit = this.resolveTaskListLimit(input.limit);
+
+    return [
+      'tasks:list',
+      input.currentUserId,
+      input.workspaceId ?? 'all',
+      input.includeDescription === false ? 'without-description' : 'with-description',
+      input.assignment ?? 'everyone',
+      input.dueBucket ?? 'all',
+      input.referenceDate ?? 'current',
+      String(limit),
+      input.cursor ?? 'start',
+    ].join(':');
+  }
+
+  private async invalidateTaskListCaches(): Promise<void> {
+    const keys = await redis.keys('tasks:list:*');
+
+    if (keys.length === 0) {
+      return;
+    }
+
+    await redis.del(...keys);
+  }
+
   private toTaskActorSummary(
     user: Pick<TaskActorSummary, 'id' | 'displayName'>,
   ): TaskActorSummary {
@@ -620,4 +656,59 @@ function toPrismaTaskStatus(status: TaskStatus): PrismaTaskStatus {
   }
 
   return PrismaTaskStatus.todo;
+}
+
+function isRecord(value: unknown): value is JsonObject {
+  return typeof value === 'object' && value !== null;
+}
+
+function isTaskActorSummary(value: unknown): value is TaskActorSummary {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return typeof value['id'] === 'string' && typeof value['displayName'] === 'string';
+}
+
+function isTaskStatus(value: unknown): value is TaskStatus {
+  return value === 'todo' || value === 'in_progress' || value === 'done';
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return typeof value === 'string' || value === null;
+}
+
+function isTaskSummary(value: unknown): value is TaskSummary {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value['id'] === 'string' &&
+    typeof value['workspaceId'] === 'string' &&
+    typeof value['title'] === 'string' &&
+    isNullableString(value['description']) &&
+    isNullableString(value['dueDate']) &&
+    isTaskStatus(value['status']) &&
+    typeof value['createdByUserId'] === 'string' &&
+    isNullableString(value['assigneeUserId']) &&
+    typeof value['createdAt'] === 'string' &&
+    typeof value['updatedAt'] === 'string' &&
+    isTaskActorSummary(value['createdByUser']) &&
+    (value['assigneeUser'] === null || isTaskActorSummary(value['assigneeUser']))
+  );
+}
+
+function isTaskListResponse(value: unknown): value is TaskListResponse {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    Array.isArray(value['tasks']) &&
+    value['tasks'].every((task) => isTaskSummary(task)) &&
+    typeof value['limit'] === 'number' &&
+    typeof value['hasMore'] === 'boolean' &&
+    isNullableString(value['nextCursor'])
+  );
 }
