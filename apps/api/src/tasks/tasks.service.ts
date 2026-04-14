@@ -8,6 +8,7 @@ import type {
   TaskStatus,
   TaskSummary,
 } from '@teamwork/types';
+import { redis } from '../common/redis';
 import { SecurityTelemetryService } from '../common/security/security-telemetry.service';
 import { MembershipsService } from '../memberships/memberships.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -150,6 +151,8 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
+    await redis.flushall();
+
     return this.toDetails(task);
   }
 
@@ -173,6 +176,13 @@ export class TasksService {
   }
 
   private async listTasks(input: ListTasksForUserInput): Promise<TaskListResponse> {
+    const cacheKey = `tasks:${JSON.stringify(input)}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as TaskListResponse;
+    }
+
     const limit = this.resolveTaskListLimit(input.limit);
     const taskRecords = await toTaskDatabase(this.prisma).task.findMany({
       where: this.buildTaskListWhere(input),
@@ -202,12 +212,16 @@ export class TasksService {
           }))
         : summaries;
 
-    return {
+    const result = {
       tasks: serializedTasks,
       limit,
       hasMore,
       nextCursor,
     };
+
+    await redis.set(cacheKey, JSON.stringify(result), 'EX', 60);
+
+    return result;
   }
 
   async getTaskForWorkspace(
@@ -257,6 +271,8 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
+    await redis.flushall();
+
     return this.toDetails(task);
   }
 
@@ -268,6 +284,8 @@ export class TasksService {
       await toTaskDatabase(this.prisma).task.delete({
         where: { id: taskId },
       });
+
+      await redis.flushall();
 
       this.securityTelemetryService.record({
         category: 'destructive',
@@ -310,6 +328,8 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
+    await redis.flushall();
+
     return this.toDetails(task);
   }
 
@@ -329,6 +349,8 @@ export class TasksService {
       data: { assigneeUserId },
       select: taskDetailsSelect,
     });
+
+    await redis.flushall();
 
     return this.toDetails(task);
   }

@@ -1,24 +1,24 @@
 {
-  "capturedAt": "2026-04-09T15:14:01.978Z",
+  "capturedAt": "2026-04-14T05:28:05.413Z",
   "runLabel": "baseline",
   "environmentLabel": "deployed",
   "apiBaseUrl": "https://teamwork-x0bz.onrender.com",
   "webBaseUrl": "https://teamwork-lovat.vercel.app",
   "fixture": {
     "workspaceId": "30938dff-da66-459a-b89c-e8882823e396",
-    "sampleTaskId": "d954fe4b-df5c-49d0-ac84-8a6ef0e6b5b2",
+    "sampleTaskId": "c4311ea1-f0cd-46de-91b3-3d601613545e",
     "taskPrefix": "[bench]",
     "targetTaskCount": 200,
-    "benchmarkTaskCount": 199,
-    "createdTaskCount": 1
+    "benchmarkTaskCount": 50,
+    "createdTaskCount": 150
   },
   "backend": {
-    "capturedAt": "2026-04-09T15:13:54.727Z",
+    "capturedAt": "2026-04-14T05:27:48.657Z",
     "apiBaseUrl": "https://teamwork-x0bz.onrender.com",
     "config": {
-      "connections": 2,
-      "durationSeconds": 8,
-      "warmupSeconds": 2
+      "connections": 20,
+      "durationSeconds": 30,
+      "warmupSeconds": 5
     },
     "endpoints": [
       {
@@ -27,17 +27,17 @@
         "method": "GET",
         "path": "/tasks",
         "latencyMs": {
-          "avg": 212.63,
-          "p50": 192,
-          "p95": 457,
-          "p99": 569
+          "avg": 680.39,
+          "p50": 642,
+          "p95": 1076.67,
+          "p99": 1256
         },
-        "requestsPerSecond": 9.25,
-        "totalRequests": 74,
+        "requestsPerSecond": 28.8,
+        "totalRequests": 864,
         "errors": 0,
         "timeouts": 0,
         "non2xx": 0,
-        "bytesPerSecond": 1098144
+        "bytesPerSecond": 705518.94
       },
       {
         "id": "workspace-tasks",
@@ -45,117 +45,170 @@
         "method": "GET",
         "path": "/workspaces/30938dff-da66-459a-b89c-e8882823e396/tasks",
         "latencyMs": {
-          "avg": 243.74,
-          "p50": 201,
-          "p95": 503.33,
-          "p99": 633
+          "avg": 660.32,
+          "p50": 607,
+          "p95": 1044,
+          "p99": 1183
         },
-        "requestsPerSecond": 8.13,
-        "totalRequests": 65,
+        "requestsPerSecond": 29.84,
+        "totalRequests": 895,
         "errors": 0,
         "timeouts": 0,
         "non2xx": 0,
-        "bytesPerSecond": 964736
+        "bytesPerSecond": 730824.54
       },
       {
         "id": "update-status",
         "label": "PATCH /workspaces/:workspaceId/tasks/:taskId/status",
         "method": "PATCH",
-        "path": "/workspaces/30938dff-da66-459a-b89c-e8882823e396/tasks/d954fe4b-df5c-49d0-ac84-8a6ef0e6b5b2/status",
+        "path": "/workspaces/30938dff-da66-459a-b89c-e8882823e396/tasks/c4311ea1-f0cd-46de-91b3-3d601613545e/status",
         "latencyMs": {
-          "avg": 150.92,
-          "p50": 130,
-          "p95": 279,
-          "p99": 415
+          "avg": 740.13,
+          "p50": 671,
+          "p95": 1307.33,
+          "p99": 1572
         },
-        "requestsPerSecond": 13.13,
-        "totalRequests": 105,
+        "requestsPerSecond": 26.6,
+        "totalRequests": 798,
         "errors": 0,
         "timeouts": 0,
         "non2xx": 0,
-        "bytesPerSecond": 15266.5
+        "bytesPerSecond": 27901.74
       }
     ]
   },
   "frontend": {
-    "capturedAt": "2026-04-09T15:14:01.978Z",
+    "capturedAt": "2026-04-14T05:28:05.413Z",
     "webBaseUrl": "https://teamwork-lovat.vercel.app",
     "boardUrl": "https://teamwork-lovat.vercel.app/workspaces/30938dff-da66-459a-b89c-e8882823e396/board",
     "config": {
-      "runs": 5,
-      "timeoutMs": 45000
+      "runs": 10,
+      "warmupRuns": 1,
+      "timeoutMs": 30000
     },
-    "successfulRuns": 5,
+    "warmupSuccessfulRuns": 1,
+    "warmupFailedRuns": 0,
+    "successfulRuns": 10,
     "failedRuns": 0,
     "metrics": {
       "boardReadyMs": {
-        "count": 5,
-        "min": 1270.39,
-        "max": 1434.68,
-        "avg": 1332.48,
-        "p50": 1305.25,
-        "p95": 1418.6,
-        "p99": 1431.46
+        "count": 10,
+        "min": 1233,
+        "max": 1743.48,
+        "avg": 1363.86,
+        "p50": 1325.47,
+        "p95": 1609.15,
+        "p99": 1716.62
       },
       "domContentLoadedMs": {
-        "count": 5,
-        "min": 448.2,
-        "max": 566.4,
-        "avg": 496.52,
-        "p50": 466.3,
-        "p95": 561.46,
-        "p99": 565.41
+        "count": 10,
+        "min": 424,
+        "max": 653.7,
+        "avg": 508.83,
+        "p50": 506.7,
+        "p95": 642,
+        "p99": 651.36
       },
       "loadEventMs": {
-        "count": 5,
-        "min": 500.1,
-        "max": 686.3,
-        "avg": 562.96,
-        "p50": 512.1,
-        "p95": 671.48,
-        "p99": 683.34
+        "count": 10,
+        "min": 475.4,
+        "max": 705.7,
+        "avg": 567.77,
+        "p50": 553.05,
+        "p95": 699.13,
+        "p99": 704.39
       }
     },
+    "warmups": [
+      {
+        "run": 1,
+        "success": true,
+        "boardReadyMs": 2341.45,
+        "domContentLoadedMs": 1497.8,
+        "loadEventMs": 1542.9,
+        "responseStartMs": 160.8
+      }
+    ],
     "runs": [
       {
         "run": 1,
         "success": true,
-        "boardReadyMs": 1434.68,
-        "domContentLoadedMs": 566.4,
-        "loadEventMs": 612.2,
-        "responseStartMs": 156.1
+        "boardReadyMs": 1444.98,
+        "domContentLoadedMs": 653.7,
+        "loadEventMs": 705.7,
+        "responseStartMs": 196.4
       },
       {
         "run": 2,
         "success": true,
-        "boardReadyMs": 1297.79,
-        "domContentLoadedMs": 466.3,
-        "loadEventMs": 512.1,
-        "responseStartMs": 131.7
+        "boardReadyMs": 1319.84,
+        "domContentLoadedMs": 512.8,
+        "loadEventMs": 559.4,
+        "responseStartMs": 203.2
       },
       {
         "run": 3,
         "success": true,
-        "boardReadyMs": 1270.39,
-        "domContentLoadedMs": 448.2,
-        "loadEventMs": 500.1,
-        "responseStartMs": 124.9
+        "boardReadyMs": 1244.18,
+        "domContentLoadedMs": 435.8,
+        "loadEventMs": 480.9,
+        "responseStartMs": 116.8
       },
       {
         "run": 4,
         "success": true,
-        "boardReadyMs": 1354.27,
-        "domContentLoadedMs": 541.7,
-        "loadEventMs": 686.3,
-        "responseStartMs": 128.8
+        "boardReadyMs": 1307.49,
+        "domContentLoadedMs": 500.6,
+        "loadEventMs": 546.7,
+        "responseStartMs": 189.6
       },
       {
         "run": 5,
         "success": true,
-        "boardReadyMs": 1305.25,
-        "domContentLoadedMs": 460,
-        "loadEventMs": 504.1,
-        "responseStartMs": 130.9
+        "boardReadyMs": 1743.48,
+        "domContentLoadedMs": 437.8,
+        "loadEventMs": 496.7,
+        "responseStartMs": 120
+      },
+      {
+        "run": 6,
+        "success": true,
+        "boardReadyMs": 1331.09,
+        "domContentLoadedMs": 517.7,
+        "loadEventMs": 566.9,
+        "responseStartMs": 179.2
+      },
+      {
+        "run": 7,
+        "success": true,
+        "boardReadyMs": 1233,
+        "domContentLoadedMs": 424,
+        "loadEventMs": 499.1,
+        "responseStartMs": 121.3
+      },
+      {
+        "run": 8,
+        "success": true,
+        "boardReadyMs": 1360.52,
+        "domContentLoadedMs": 551.6,
+        "loadEventMs": 691.1,
+        "responseStartMs": 159.5
+      },
+      {
+        "run": 9,
+        "success": true,
+        "boardReadyMs": 1234.37,
+        "domContentLoadedMs": 426.6,
+        "loadEventMs": 475.4,
+        "responseStartMs": 118.9
+      },
+      {
+        "run": 10,
+        "success": true,
+        "boardReadyMs": 1419.63,
+        "domContentLoadedMs": 627.7,
+        "loadEventMs": 655.8,
+        "responseStartMs": 197.8
       }
     ]
   }
