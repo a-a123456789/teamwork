@@ -13,6 +13,7 @@ import {
   DEFAULT_BOARD_STATUS_FILTER,
   buildBoardAssigneeOptions,
   getBackendAssignmentFilter,
+  INITIAL_BOARD_TASK_LIMIT,
   matchesTaskAssignmentFilter,
   resolveBoardAssigneeFilter,
   type BoardStatusFilter,
@@ -81,8 +82,12 @@ export function WorkspaceBoardPageClient({
         workspaceId,
         accessToken,
         backendAssignmentFilter
-          ? { assignment: backendAssignmentFilter, includeMembers: false }
-          : { includeMembers: false },
+          ? {
+              assignment: backendAssignmentFilter,
+              includeMembers: false,
+              limit: INITIAL_BOARD_TASK_LIMIT,
+            }
+          : { includeMembers: false, limit: INITIAL_BOARD_TASK_LIMIT },
       ),
     cacheTtlMs: BOARD_CACHE_TTL_MS,
     useStaleWhileRevalidate: true,

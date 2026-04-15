@@ -56,6 +56,7 @@ export const DEFAULT_BOARD_ASSIGNEE_FILTER: BoardAssigneeFilter = {
   kind: 'all',
   label: 'All',
 };
+export const INITIAL_BOARD_TASK_LIMIT = 30;
 
 export function buildBoardAssigneeOptions(
   members: WorkspaceMemberDetail[] | null,
