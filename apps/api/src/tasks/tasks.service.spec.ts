@@ -701,6 +701,24 @@ describe('TasksService', () => {
     expect(prisma.task.findMany).toHaveBeenCalledTimes(1);
   });
 
+  it('ignores redis invalidation failures during task mutations', async () => {
+    prisma.workspaceMembership.findUnique.mockResolvedValueOnce({ id: 'membership-2' });
+    prisma.task.create.mockResolvedValueOnce(buildTaskRecord());
+    redisMock.keys.mockRejectedValueOnce(new Error('redis invalidation failed'));
+
+    const result = await service.createTask(
+      workspaceId,
+      {
+        title: 'Build API',
+        assigneeUserId: otherUserId,
+      },
+      userId,
+    );
+
+    expect(result.id).toBe(taskId);
+    expect(prisma.task.create).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects an invalid referenceDate before querying tasks', async () => {
     await expect(
       service.listTasksForWorkspace({

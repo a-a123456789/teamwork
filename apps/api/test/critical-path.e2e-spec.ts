@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
+import { closeRedisClient } from './../src/common/redis';
 
 describe('Critical Path API Integration (e2e)', () => {
   let app: INestApplication;
@@ -21,6 +22,7 @@ describe('Critical Path API Integration (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
+    await closeRedisClient();
   });
 
   it('covers invite inbox acceptance and workspace board data access', async () => {

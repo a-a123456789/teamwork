@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
+import { closeRedisClient } from './../src/common/redis';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -19,6 +20,7 @@ describe('AppController (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
+    await closeRedisClient();
   });
 
   it('/ (GET)', () => {

@@ -641,13 +641,17 @@ export class TasksService {
   }
 
   private async invalidateTaskListCaches(): Promise<void> {
-    const keys = await redis.keys('tasks:list:*');
+    try {
+      const keys = await redis.keys('tasks:list:*');
 
-    if (keys.length === 0) {
-      return;
+      if (keys.length === 0) {
+        return;
+      }
+
+      await redis.del(...keys);
+    } catch {
+      // Treat cache invalidation failures as non-fatal.
     }
-
-    await redis.del(...keys);
   }
 
   private toTaskActorSummary(
