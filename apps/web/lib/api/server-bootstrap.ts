@@ -3,6 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import type { AuthMeResponse, WorkspaceBoardDataResponse } from '@teamwork/types';
 import { parseAuthMeResponse, parseWorkspaceBoardDataResponse } from '@/lib/api/contracts';
+import { INITIAL_BOARD_TASK_LIMIT } from '@/lib/board';
 import { COOKIE_SESSION_MARKER_PREFIX } from '@/lib/auth/session-constants';
 
 const SERVER_ACCESS_TOKEN_COOKIE_NAMES = ['teamwork.at', 'teamwork.accessToken'] as const;
@@ -80,8 +81,12 @@ export async function loadInitialWorkspaceBoardData(
   }
 
   try {
+    const searchParams = new URLSearchParams({
+      includeMembers: 'false',
+      limit: String(INITIAL_BOARD_TASK_LIMIT),
+    });
     const response = await fetch(
-      `${getApiBaseUrl()}/workspaces/${workspaceId}/board-data?includeMembers=false`,
+      `${getApiBaseUrl()}/workspaces/${workspaceId}/board-data?${searchParams.toString()}`,
       {
         method: 'GET',
         headers: {
