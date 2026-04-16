@@ -56,9 +56,13 @@ Any failure blocks merges/deploy readiness.
 ## Deployment Sequence
 
 1. Run `pnpm release:gate` locally (or in a release candidate branch CI run).
-2. Deploy API.
-3. Deploy web app with `NEXT_PUBLIC_API_BASE_URL` pointing to API.
-4. Smoke test critical flows:
+2. Set production custom domains so web/API share the same parent domain (for example, `app.yourdomain.com` + `api.yourdomain.com`).
+3. Deploy API with cookie settings aligned to shared domain:
+   - `AUTH_COOKIE_SAME_SITE=lax`
+   - `AUTH_COOKIE_SECURE=true`
+   - `AUTH_COOKIE_DOMAIN=.yourdomain.com`
+4. Deploy web app with `NEXT_PUBLIC_API_BASE_URL` pointing to API.
+5. Smoke test critical flows:
    - sign-up/sign-in/sign-out
    - workspace creation
    - invitations and share-link joins

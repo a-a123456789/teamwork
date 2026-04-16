@@ -10,6 +10,7 @@ interface UseAuthenticatedApiResourceOptions<T> {
   useStaleWhileRevalidate?: boolean;
   initialData?: T | null;
   enabled?: boolean;
+  allowAccessTokenDuringAuthLoading?: boolean;
 }
 
 type ResourceState<T> =
@@ -51,6 +52,7 @@ export function useAuthenticatedApiResource<T>({
   useStaleWhileRevalidate = false,
   initialData = null,
   enabled = true,
+  allowAccessTokenDuringAuthLoading = false,
 }: UseAuthenticatedApiResourceOptions<T>): ResourceState<T> {
   const { status, accessToken } = useAuthSession();
   const loadRef = useRef(load);
@@ -77,7 +79,13 @@ export function useAuthenticatedApiResource<T>({
   }, [load]);
 
   useEffect(() => {
-    if (!enabled || status !== 'authenticated' || !accessToken) {
+    const shouldRunRequest =
+      enabled &&
+      Boolean(accessToken) &&
+      (status === 'authenticated' ||
+        (allowAccessTokenDuringAuthLoading && status === 'loading'));
+
+    if (!shouldRunRequest || !accessToken) {
       requestTokenRef.current = null;
       return;
     }
@@ -202,9 +210,24 @@ export function useAuthenticatedApiResource<T>({
         requestTokenRef.current = null;
       }
     };
-  }, [accessToken, cacheTtlMs, enabled, initialData, key, status, useStaleWhileRevalidate]);
+  }, [
+    accessToken,
+    allowAccessTokenDuringAuthLoading,
+    cacheTtlMs,
+    enabled,
+    initialData,
+    key,
+    status,
+    useStaleWhileRevalidate,
+  ]);
 
-  if (!enabled || status !== 'authenticated' || !accessToken) {
+  const canReadOrLoad =
+    enabled &&
+    Boolean(accessToken) &&
+    (status === 'authenticated' ||
+      (allowAccessTokenDuringAuthLoading && status === 'loading'));
+
+  if (!canReadOrLoad) {
     return {
       status: 'loading',
       data: null,

@@ -1,5 +1,5 @@
 import type { GroupedBoardColumn } from '@/lib/board';
-import { BoardTaskCard } from '@/components/board/task-card';
+import { DeferredBoardTaskCard } from '@/components/board/deferred-board-task-card';
 import { readBoardStatusAccent } from '@/lib/board-status-accent';
 
 interface BoardColumnProps {
@@ -7,6 +7,8 @@ interface BoardColumnProps {
   hasAnyVisibleTasks: boolean;
   onTaskOpen: (taskId: string) => void;
 }
+
+const EAGER_TASK_CARD_COUNT = 4;
 
 export function BoardColumn({ column, hasAnyVisibleTasks, onTaskOpen }: BoardColumnProps) {
   const accent = readBoardStatusAccent(column.status);
@@ -24,8 +26,13 @@ export function BoardColumn({ column, hasAnyVisibleTasks, onTaskOpen }: BoardCol
       </div>
 
       <div className="flex min-h-[16rem] flex-col gap-[0.875rem] sm:min-h-[22rem] sm:gap-[1rem]">
-        {column.tasks.map((task) => (
-          <BoardTaskCard key={task.id} task={task} onOpen={onTaskOpen} />
+        {column.tasks.map((task, index) => (
+          <DeferredBoardTaskCard
+            key={task.id}
+            task={task}
+            onOpen={onTaskOpen}
+            eager={index < EAGER_TASK_CARD_COUNT}
+          />
         ))}
 
         {column.tasks.length === 0 ? (

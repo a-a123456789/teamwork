@@ -165,11 +165,14 @@ NODE_ENV=production
 DATABASE_URL=postgresql://...
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN=15m
-APP_URL=https://your-web-app.vercel.app
-INVITE_BASE_URL=https://your-web-app.vercel.app
+APP_URL=https://app.yourdomain.com
+INVITE_BASE_URL=https://app.yourdomain.com
 INVITE_TTL_DAYS=30
 SHARE_LINK_TTL_DAYS=14
-CORS_ALLOWED_ORIGINS=https://your-web-app.vercel.app
+CORS_ALLOWED_ORIGINS=https://app.yourdomain.com
+AUTH_COOKIE_SAME_SITE=lax
+AUTH_COOKIE_SECURE=true
+AUTH_COOKIE_DOMAIN=.yourdomain.com
 PORT=3000
 ```
 
@@ -178,6 +181,8 @@ Web:
 ```env
 NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com
 ```
+
+Use shared custom domains for web/API when possible (for example, `app.yourdomain.com` + `api.yourdomain.com`) so auth cookies can be scoped to `.yourdomain.com`. This enables reliable server-side auth/board preload and avoids cross-site cookie limitations from `*.vercel.app` + `*.onrender.com`.
 
 ### First Deploy Checklist
 

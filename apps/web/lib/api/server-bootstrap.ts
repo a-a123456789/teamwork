@@ -4,9 +4,12 @@ import { cookies } from 'next/headers';
 import type { AuthMeResponse, WorkspaceBoardDataResponse } from '@teamwork/types';
 import { parseAuthMeResponse, parseWorkspaceBoardDataResponse } from '@/lib/api/contracts';
 import { INITIAL_BOARD_TASK_LIMIT } from '@/lib/board';
-import { COOKIE_SESSION_MARKER_PREFIX } from '@/lib/auth/session-constants';
+import {
+  COOKIE_SESSION_MARKER_PREFIX,
+  LEGACY_ACCESS_TOKEN_COOKIE_NAME,
+} from '@/lib/auth/session-constants';
 
-const SERVER_ACCESS_TOKEN_COOKIE_NAMES = ['teamwork.at', 'teamwork.accessToken'] as const;
+const SERVER_ACCESS_TOKEN_COOKIE_NAMES = ['teamwork.at', LEGACY_ACCESS_TOKEN_COOKIE_NAME] as const;
 const EMPTY_AUTH: AuthMeResponse = {
   user: {
     id: '',
@@ -26,9 +29,14 @@ export interface InitialAuthSessionSnapshot {
 }
 
 export async function loadInitialAuthSessionSnapshot(): Promise<InitialAuthSessionSnapshot | null> {
-  const accessToken = await readServerAccessToken();
+  const accessTokenEntry = await readServerAccessToken();
 
-  if (!accessToken) {
+  if (!accessTokenEntry) {
+    return null;
+  }
+
+  if (accessTokenEntry.source === 'legacy-token') {
+    // Keep auth bootstrap non-blocking when the token came from local-storage mirroring.
     return null;
   }
 
@@ -37,7 +45,7 @@ export async function loadInitialAuthSessionSnapshot(): Promise<InitialAuthSessi
       method: 'GET',
       headers: {
         Accept: 'application/json',
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessTokenEntry.token}`,
       },
       cache: 'no-store',
     });
@@ -74,9 +82,9 @@ export async function loadInitialAuthSessionSnapshot(): Promise<InitialAuthSessi
 export async function loadInitialWorkspaceBoardData(
   workspaceId: string,
 ): Promise<WorkspaceBoardDataResponse | null> {
-  const accessToken = await readServerAccessToken();
+  const accessTokenEntry = await readServerAccessToken();
 
-  if (!accessToken) {
+  if (!accessTokenEntry) {
     return null;
   }
 
@@ -91,7 +99,7 @@ export async function loadInitialWorkspaceBoardData(
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessTokenEntry.token}`,
         },
         cache: 'no-store',
       },
@@ -112,14 +120,20 @@ export async function loadInitialWorkspaceBoardData(
   }
 }
 
-async function readServerAccessToken(): Promise<string | null> {
+async function readServerAccessToken(): Promise<{
+  token: string;
+  source: 'api-cookie' | 'legacy-token';
+} | null> {
   const cookieStore = await cookies();
 
   for (const cookieName of SERVER_ACCESS_TOKEN_COOKIE_NAMES) {
     const rawValue = cookieStore.get(cookieName)?.value.trim();
 
     if (rawValue && rawValue.length > 0) {
-      return rawValue;
+      return {
+        token: rawValue,
+        source: cookieName === 'teamwork.at' ? 'api-cookie' : 'legacy-token',
+      };
     }
   }
 

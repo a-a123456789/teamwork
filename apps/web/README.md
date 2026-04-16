@@ -24,7 +24,8 @@ Recommended:
 
 - deploy `apps/web` to Vercel
 - set `NEXT_PUBLIC_API_BASE_URL` to the hosted API origin
-- point the API's `APP_URL` and `INVITE_BASE_URL` back to the deployed Vercel URL
+- point the API's `APP_URL` and `INVITE_BASE_URL` back to the deployed web URL
+- for SSR preload and cookie-based auth bootstrap, use shared custom domains (for example, `app.yourdomain.com` + `api.yourdomain.com`) and configure API `AUTH_COOKIE_DOMAIN=.yourdomain.com`
 
 ## Verification
 

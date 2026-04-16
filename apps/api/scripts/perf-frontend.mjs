@@ -102,11 +102,21 @@ async function runBoardMeasurement({
 }) {
   const context = await browser.newContext();
   const page = await context.newPage();
+  const boardOrigin = new URL(boardUrl).origin;
 
   try {
-    // Keep auth token in localStorage only. Setting a web-domain auth cookie causes
-    // server bootstrap to switch into cookie-session marker mode, which can drop
-    // Bearer auth on client API requests during benchmarks.
+    await context.addCookies([
+      {
+        name: 'teamwork.accessToken',
+        value: accessToken,
+        url: boardOrigin,
+        path: '/',
+        sameSite: 'Lax',
+        secure: boardOrigin.startsWith('https://'),
+      },
+    ]);
+
+    // Keep token in localStorage so client-side authenticated requests can start immediately.
     await page.addInitScript((token) => {
       window.localStorage.setItem('teamwork.accessToken', token);
     }, accessToken);
