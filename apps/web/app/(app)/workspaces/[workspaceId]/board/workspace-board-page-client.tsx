@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import type { WorkspaceBoardDataResponse } from '@teamwork/types';
+import type { TaskSummary, WorkspaceBoardDataResponse } from '@teamwork/types';
 import { BoardLoadingState } from '@/components/board/board-loading';
 import { BoardPage } from '@/components/board/board-page';
 import { PageStatusCard, PageSurface } from '@/components/app-shell/page-state';
+import { AppButton } from '@/components/ui/button';
 import { useAuthSession } from '@/lib/auth/auth-session-provider';
 import { getWorkspaceBoardData, getWorkspaceMembers } from '@/lib/api/client';
 import {
@@ -43,6 +44,16 @@ const TaskDetailsModal = dynamic(
 const STATUS_OPTIONS: BoardStatusFilter[] = ['all', 'todo', 'in_progress', 'done'];
 const GENERIC_BOARD_ERROR_MESSAGE = 'This workspace board could not be loaded right now.';
 const BOARD_CACHE_TTL_MS = 30_000;
+const GENERIC_LAZY_LOAD_ERROR_MESSAGE = 'More tasks could not be loaded right now.';
+
+interface BoardPaginationState {
+  key: string | null;
+  extraTasks: TaskSummary[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  status: 'idle' | 'loading' | 'error';
+  errorMessage: string | null;
+}
 
 interface WorkspaceBoardPageClientProps {
   workspaceId: string;
@@ -53,7 +64,7 @@ export function WorkspaceBoardPageClient({
   workspaceId,
   initialBoardData,
 }: WorkspaceBoardPageClientProps) {
-  const { auth } = useAuthSession();
+  const { auth, accessToken } = useAuthSession();
   const initialMembers = initialBoardData?.membersLoaded ? initialBoardData.members : null;
   const [statusFilter, setStatusFilter] = useState(DEFAULT_BOARD_STATUS_FILTER);
   const [assigneeFilter, setAssigneeFilter] = useState(DEFAULT_BOARD_ASSIGNEE_FILTER);
@@ -69,6 +80,14 @@ export function WorkspaceBoardPageClient({
       tasks: [],
       removedTaskIds: [],
     },
+  });
+  const [paginationState, setPaginationState] = useState<BoardPaginationState>({
+    key: null,
+    extraTasks: [],
+    nextCursor: null,
+    hasMore: false,
+    status: 'idle',
+    errorMessage: null,
   });
   const { setActionOverride } = useAppShellAction();
 
@@ -92,7 +111,9 @@ export function WorkspaceBoardPageClient({
     cacheTtlMs: BOARD_CACHE_TTL_MS,
     useStaleWhileRevalidate: true,
     initialData: backendAssignmentFilter ? null : initialBoardData,
+    allowAccessTokenDuringAuthLoading: true,
   });
+  const boardData = boardDataQuery.status === 'success' ? boardDataQuery.data : null;
   const shouldLoadMembers =
     initialMembers === null &&
     (boardDataQuery.status === 'success' || initialBoardData !== null);
@@ -114,7 +135,21 @@ export function WorkspaceBoardPageClient({
     [assigneeFilter, assigneeOptions],
   );
   const taskQueryKey = `workspace:${workspaceId}:tasks:board:${backendAssignmentFilter ?? 'everyone'}`;
-  const baseTaskItems = boardDataQuery.status === 'success' ? boardDataQuery.data.tasks : [];
+  const activePaginationState =
+    paginationState.key === boardQueryKey
+      ? paginationState
+      : {
+          key: boardQueryKey,
+          extraTasks: [],
+          nextCursor: null,
+          hasMore: false,
+          status: 'idle' as const,
+          errorMessage: null,
+        };
+  const baseTaskItems =
+    boardData !== null
+      ? mergeBoardTaskPages(boardData.tasks, activePaginationState.extraTasks)
+      : [];
   const taskItems =
     taskItemsState.key === taskQueryKey
       ? mergeTaskListOverlay(baseTaskItems, taskItemsState.overlay)
@@ -135,6 +170,110 @@ export function WorkspaceBoardPageClient({
   const closeTaskDetailsModal = useCallback(() => {
     setSelectedTaskId(null);
   }, []);
+
+  useEffect(() => {
+    if (boardData === null) {
+      return;
+    }
+
+    setPaginationState((current) => {
+      if (current.key === boardQueryKey) {
+        return current;
+      }
+
+      return {
+        key: boardQueryKey,
+        extraTasks: [],
+        nextCursor: boardData.nextCursor,
+        hasMore: boardData.hasMore,
+        status: 'idle',
+        errorMessage: null,
+      };
+    });
+  }, [boardData, boardQueryKey]);
+
+  const loadMoreTasks = useCallback(async () => {
+    if (boardData === null) {
+      return;
+    }
+
+    if (
+      !accessToken ||
+      activePaginationState.status === 'loading' ||
+      !activePaginationState.hasMore ||
+      !activePaginationState.nextCursor
+    ) {
+      return;
+    }
+
+    setPaginationState((current) => {
+      if (current.key !== boardQueryKey) {
+        return current;
+      }
+
+      return {
+        ...current,
+        status: 'loading',
+        errorMessage: null,
+      };
+    });
+
+    try {
+      const nextPage = await getWorkspaceBoardData(
+        workspaceId,
+        accessToken,
+        backendAssignmentFilter
+          ? {
+              assignment: backendAssignmentFilter,
+              includeMembers: false,
+              limit: INITIAL_BOARD_TASK_LIMIT,
+              cursor: activePaginationState.nextCursor,
+            }
+          : {
+              includeMembers: false,
+              limit: INITIAL_BOARD_TASK_LIMIT,
+              cursor: activePaginationState.nextCursor,
+            },
+      );
+
+      setPaginationState((current) => {
+        if (current.key !== boardQueryKey) {
+          return current;
+        }
+
+        return {
+          ...current,
+          extraTasks: mergeBoardTaskPages(current.extraTasks, nextPage.tasks),
+          nextCursor: nextPage.nextCursor,
+          hasMore: nextPage.hasMore,
+          status: 'idle',
+          errorMessage: null,
+        };
+      });
+    } catch (error) {
+      setPaginationState((current) => {
+        if (current.key !== boardQueryKey) {
+          return current;
+        }
+
+        return {
+          ...current,
+          status: 'error',
+          errorMessage:
+            error instanceof Error ? error.message : GENERIC_LAZY_LOAD_ERROR_MESSAGE,
+        };
+      });
+    }
+  }, [
+    accessToken,
+    activePaginationState.hasMore,
+    activePaginationState.nextCursor,
+    activePaginationState.status,
+    backendAssignmentFilter,
+    boardData,
+    boardQueryKey,
+    workspaceId,
+  ]);
 
   useEffect(() => {
     if (boardDataQuery.status !== 'success') {
@@ -197,12 +336,31 @@ export function WorkspaceBoardPageClient({
             />
           ) : null}
 
-          {boardDataQuery.data.hasMore ? (
+          {activePaginationState.hasMore || activePaginationState.status !== 'idle' ? (
             <PageSurface
               eyebrow="Task list capped"
               title={`Showing the newest ${String(boardDataQuery.data.limit)} tasks`}
-              description="This workspace has more tasks than the current response includes. Refine the board filters to narrow the list."
-            />
+              description="Initial board payload is intentionally compact. Load additional pages only when you need them."
+            >
+              <div className="flex flex-wrap items-center gap-3">
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    void loadMoreTasks();
+                  }}
+                  disabled={!activePaginationState.hasMore || activePaginationState.status === 'loading'}
+                >
+                  {activePaginationState.status === 'loading' ? 'Loading…' : 'Load more tasks'}
+                </AppButton>
+
+                {activePaginationState.status === 'error' ? (
+                  <p className="text-[0.86rem] text-danger">
+                    {activePaginationState.errorMessage ?? GENERIC_LAZY_LOAD_ERROR_MESSAGE}
+                  </p>
+                ) : null}
+              </div>
+            </PageSurface>
           ) : null}
 
           <BoardPage
@@ -287,4 +445,24 @@ export function WorkspaceBoardPageClient({
       />
     </div>
   );
+}
+
+function mergeBoardTaskPages(baseTasks: TaskSummary[], nextTasks: TaskSummary[]): TaskSummary[] {
+  if (nextTasks.length === 0) {
+    return baseTasks;
+  }
+
+  const tasksById = new Map<string, TaskSummary>();
+
+  for (const task of baseTasks) {
+    tasksById.set(task.id, task);
+  }
+
+  for (const task of nextTasks) {
+    if (!tasksById.has(task.id)) {
+      tasksById.set(task.id, task);
+    }
+  }
+
+  return Array.from(tasksById.values());
 }

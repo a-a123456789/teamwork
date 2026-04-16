@@ -65,9 +65,13 @@ export function AuthSessionProvider({
 }) {
   const [status, setStatus] = useState<AuthStatus>(initialSession?.status ?? 'loading');
   const [auth, setAuth] = useState(initialSession?.auth ?? EMPTY_AUTH);
-  const [accessToken, setAccessTokenState] = useState<string | null>(
-    initialSession?.accessToken ?? null,
-  );
+  const [accessToken, setAccessTokenState] = useState<string | null>(() => {
+    if (initialSession) {
+      return initialSession.accessToken;
+    }
+
+    return getLegacyStoredAccessToken();
+  });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -157,6 +161,7 @@ async function resolveSessionState(tokenOverride?: string | null): Promise<AuthS
   if (legacyToken) {
     try {
       const nextAuth = await getAuthMe(legacyToken);
+      setLegacyStoredAccessToken(legacyToken);
       return {
         status: 'authenticated',
         auth: nextAuth,

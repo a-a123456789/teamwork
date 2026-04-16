@@ -45,7 +45,7 @@ const LazyCreateWorkspaceModal = dynamic(
 export function AppShell({ children }: AppShellProps): ReactNode {
   const pathname = usePathname();
   const router = useRouter();
-  const { status, auth, errorMessage, refreshSession } = useAuthSession();
+  const { status, auth, accessToken, errorMessage, refreshSession } = useAuthSession();
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
   const [showInteractiveChrome, setShowInteractiveChrome] = useState(false);
 
@@ -83,6 +83,20 @@ export function AppShell({ children }: AppShellProps): ReactNode {
   }
 
   if (status !== 'authenticated') {
+    if (status === 'loading' && accessToken) {
+      return (
+        <div className="flex min-h-screen gap-3.5 p-3.5 lg:gap-4 lg:p-4">
+          <SidebarNavigationFallback />
+          <div className="shell-panel flex min-h-[calc(100vh-1.75rem)] flex-1 flex-col overflow-hidden rounded-[1.45rem] border border-line bg-surface-strong shadow-[var(--shadow)]">
+            <AppShellHeaderFallback routeContext={null} />
+            <div className="shell-scrollbar shell-grid flex-1 overflow-y-auto px-4 py-4 lg:px-6 lg:py-5">
+              {children}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <main className="flex min-h-screen items-center justify-center px-6 py-10">
         <PageStatusCard
