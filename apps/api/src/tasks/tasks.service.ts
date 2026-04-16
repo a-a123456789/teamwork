@@ -172,7 +172,7 @@ export class TasksService {
 
     return this.listTasks({
       currentUserId,
-      includeDescription: true,
+      includeDescription: false,
       ...filters,
     });
   }
@@ -195,8 +195,9 @@ export class TasksService {
     }
 
     const limit = this.resolveTaskListLimit(input.limit);
+    const where = await this.buildTaskListWhere(input);
     const taskRecords = await toTaskDatabase(this.prisma).task.findMany({
-      where: this.buildTaskListWhere(input),
+      where,
       select: taskListSelect,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
@@ -454,28 +455,46 @@ export class TasksService {
     return parsedDueDate;
   }
 
-  private buildTaskListWhere(input: ListTasksForUserInput): Prisma.TaskWhereInput {
+  private async buildTaskListWhere(input: ListTasksForUserInput): Promise<Prisma.TaskWhereInput> {
+    const scopeFilter = await this.buildTaskListScopeFilter(input);
+
     return {
-      ...this.buildTaskListScopeFilter(input),
+      ...scopeFilter,
       ...this.buildAssignmentFilter(input.assignment ?? 'everyone', input.currentUserId),
       ...this.buildDueBucketFilter(input.dueBucket, input.referenceDate),
     };
   }
 
-  private buildTaskListScopeFilter(input: ListTasksForUserInput): Prisma.TaskWhereInput {
+  private async buildTaskListScopeFilter(
+    input: ListTasksForUserInput,
+  ): Promise<Prisma.TaskWhereInput> {
     if (input.workspaceId) {
       return {
         workspaceId: input.workspaceId,
       };
     }
 
-    return {
-      workspace: {
-        memberships: {
-          some: {
-            userId: input.currentUserId,
-          },
+    const memberships = await this.prisma.workspaceMembership.findMany({
+      where: {
+        userId: input.currentUserId,
+      },
+      select: {
+        workspaceId: true,
+      },
+    });
+    const accessibleWorkspaceIds = memberships.map((membership) => membership.workspaceId);
+
+    if (accessibleWorkspaceIds.length === 0) {
+      return {
+        workspaceId: {
+          in: [],
         },
+      };
+    }
+
+    return {
+      workspaceId: {
+        in: accessibleWorkspaceIds,
       },
     };
   }

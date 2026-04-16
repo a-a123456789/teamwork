@@ -13,6 +13,7 @@ const DEFAULT_API_BASE_URL = 'http://127.0.0.1:3000';
 const DEFAULT_CONNECTIONS = 1;
 const DEFAULT_DURATION_SECONDS = 30;
 const DEFAULT_WARMUP_SECONDS = 5;
+const DEFAULT_SCENARIO_WARMUP_SECONDS = 0;
 const DEFAULT_REQUEST_TIMEOUT_SECONDS = 60;
 
 export async function runBackendBenchmarks(options) {
@@ -27,6 +28,9 @@ export async function runBackendBenchmarks(options) {
     options.durationSeconds ?? getEnvInteger('BACKEND_DURATION_SECONDS', DEFAULT_DURATION_SECONDS);
   const warmupSeconds =
     options.warmupSeconds ?? getEnvInteger('BACKEND_WARMUP_SECONDS', DEFAULT_WARMUP_SECONDS);
+  const scenarioWarmupSeconds =
+    options.scenarioWarmupSeconds ??
+    getEnvInteger('BACKEND_SCENARIO_WARMUP_SECONDS', DEFAULT_SCENARIO_WARMUP_SECONDS);
   const requestTimeoutSeconds =
     options.requestTimeoutSeconds ??
     getEnvInteger('BACKEND_REQUEST_TIMEOUT_SECONDS', DEFAULT_REQUEST_TIMEOUT_SECONDS);
@@ -57,32 +61,45 @@ export async function runBackendBenchmarks(options) {
 
   const results = [];
 
-  for (const scenario of scenarios) {
-    await executeAutocannon({
-      url: `${apiBaseUrl}${scenario.path}`,
-      connections,
-      duration: warmupSeconds,
-      timeout: requestTimeoutSeconds,
-      method: scenario.method,
-      headers: {
-        ...authHeaders,
-        ...(scenario.headers ?? {}),
-      },
-      body: scenario.body ? JSON.stringify(scenario.body) : undefined,
-    });
+  if (warmupSeconds > 0) {
+    for (const scenario of scenarios) {
+      await executeAutocannon(
+        buildAutocannonScenarioRequest({
+          apiBaseUrl,
+          authHeaders,
+          scenario,
+          connections,
+          duration: warmupSeconds,
+          requestTimeoutSeconds,
+        }),
+      );
+    }
+  }
 
-    const measured = await executeAutocannon({
-      url: `${apiBaseUrl}${scenario.path}`,
-      connections,
-      duration: durationSeconds,
-      timeout: requestTimeoutSeconds,
-      method: scenario.method,
-      headers: {
-        ...authHeaders,
-        ...(scenario.headers ?? {}),
-      },
-      body: scenario.body ? JSON.stringify(scenario.body) : undefined,
-    });
+  for (const scenario of scenarios) {
+    if (scenarioWarmupSeconds > 0) {
+      await executeAutocannon(
+        buildAutocannonScenarioRequest({
+          apiBaseUrl,
+          authHeaders,
+          scenario,
+          connections,
+          duration: scenarioWarmupSeconds,
+          requestTimeoutSeconds,
+        }),
+      );
+    }
+
+    const measured = await executeAutocannon(
+      buildAutocannonScenarioRequest({
+        apiBaseUrl,
+        authHeaders,
+        scenario,
+        connections,
+        duration: durationSeconds,
+        requestTimeoutSeconds,
+      }),
+    );
 
     results.push({
       id: scenario.id,
@@ -111,9 +128,32 @@ export async function runBackendBenchmarks(options) {
       connections,
       durationSeconds,
       warmupSeconds,
+      scenarioWarmupSeconds,
       requestTimeoutSeconds,
     },
     endpoints: results,
+  };
+}
+
+function buildAutocannonScenarioRequest({
+  apiBaseUrl,
+  authHeaders,
+  scenario,
+  connections,
+  duration,
+  requestTimeoutSeconds,
+}) {
+  return {
+    url: `${apiBaseUrl}${scenario.path}`,
+    connections,
+    duration,
+    timeout: requestTimeoutSeconds,
+    method: scenario.method,
+    headers: {
+      ...authHeaders,
+      ...(scenario.headers ?? {}),
+    },
+    body: scenario.body ? JSON.stringify(scenario.body) : undefined,
   };
 }
 

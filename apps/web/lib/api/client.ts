@@ -422,8 +422,16 @@ export async function acceptWorkspaceShareLinkByToken(
   });
 }
 
+const INBOX_TASK_LIMIT = 25;
+
 export async function listInboxTasks(accessToken: string): Promise<TaskListResponse> {
-  return apiRequest('/tasks', {
+  const searchParams = buildTaskListSearchParams({
+    limit: INBOX_TASK_LIMIT,
+  });
+  const queryString = searchParams.toString();
+  const path = queryString ? `/tasks?${queryString}` : '/tasks';
+
+  return apiRequest(path, {
     accessToken,
     parser: parseTaskListResponse,
   });

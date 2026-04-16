@@ -58,6 +58,7 @@ describe('TasksService', () => {
     };
     workspaceMembership: {
       findUnique: jest.Mock;
+      findMany: jest.Mock;
     };
   };
   let membershipsService: {
@@ -87,8 +88,13 @@ describe('TasksService', () => {
       },
       workspaceMembership: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
       },
     };
+    prisma.workspaceMembership.findMany.mockResolvedValue([
+      { workspaceId },
+      { workspaceId: otherWorkspaceId },
+    ]);
     membershipsService = {
       requireMembership: jest.fn(),
     };
@@ -228,15 +234,19 @@ describe('TasksService', () => {
     const result = await service.listTasksForUser(userId, {});
 
     expect(membershipsService.requireMembership).not.toHaveBeenCalled();
+    expect(prisma.workspaceMembership.findMany).toHaveBeenCalledWith({
+      where: {
+        userId,
+      },
+      select: {
+        workspaceId: true,
+      },
+    });
     expect(prisma.task.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          workspace: {
-            memberships: {
-              some: {
-                userId,
-              },
-            },
+          workspaceId: {
+            in: [workspaceId, otherWorkspaceId],
           },
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -244,7 +254,7 @@ describe('TasksService', () => {
       }),
     );
     expect(result).toEqual({
-      tasks: [expect.objectContaining({ id: taskId })],
+      tasks: [expect.objectContaining({ id: taskId, description: null })],
       limit: 50,
       hasMore: false,
       nextCursor: null,
