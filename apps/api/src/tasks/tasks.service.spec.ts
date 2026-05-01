@@ -11,8 +11,7 @@ jest.mock('../common/redis', () => ({
   redis: {
     get: jest.fn(),
     set: jest.fn(),
-    keys: jest.fn(),
-    del: jest.fn(),
+    incr: jest.fn(),
   },
 }));
 
@@ -70,10 +69,11 @@ describe('TasksService', () => {
   let service: TasksService;
 
   beforeEach(async () => {
-    redisMock.get.mockReset().mockResolvedValue(null);
+    redisMock.get.mockReset().mockImplementation((key: string) =>
+      Promise.resolve(key.startsWith('tasks:list:version:') ? '0' : null),
+    );
     redisMock.set.mockReset().mockResolvedValue('OK');
-    redisMock.keys.mockReset().mockResolvedValue([]);
-    redisMock.del.mockReset().mockResolvedValue(0);
+    redisMock.incr.mockReset().mockResolvedValue(1);
 
     prisma = {
       task: {
@@ -517,7 +517,7 @@ describe('TasksService', () => {
       }),
     );
     expect(redisMock.get).toHaveBeenCalledWith(
-      'tasks:list:user-1:workspace-1:with-description:everyone:today:2026-04-02:50:start',
+      'tasks:list:user-1:workspace-1:with-description:everyone:today:2026-04-02:0.0:50:start',
     );
   });
 
@@ -534,13 +534,11 @@ describe('TasksService', () => {
       currentUserId: userId,
     });
 
-    expect(redisMock.get).toHaveBeenNthCalledWith(
-      1,
-      'tasks:list:user-1:workspace-1:without-description:everyone:all:no-reference-date:50:start',
+    expect(redisMock.get).toHaveBeenCalledWith(
+      'tasks:list:user-1:workspace-1:without-description:everyone:all:no-reference-date:0.0:50:start',
     );
-    expect(redisMock.get).toHaveBeenNthCalledWith(
-      2,
-      'tasks:list:user-1:workspace-1:with-description:everyone:all:no-reference-date:50:start',
+    expect(redisMock.get).toHaveBeenCalledWith(
+      'tasks:list:user-1:workspace-1:with-description:everyone:all:no-reference-date:0.0:50:start',
     );
   });
 
@@ -558,7 +556,7 @@ describe('TasksService', () => {
     });
 
     expect(redisMock.get).toHaveBeenCalledWith(
-      'tasks:list:user-1:workspace-2:with-description:others:upcoming:2026-04-15:25:task-1',
+      'tasks:list:user-1:workspace-2:with-description:others:upcoming:2026-04-15:0.0:25:task-1',
     );
   });
 
@@ -577,7 +575,9 @@ describe('TasksService', () => {
     }
 
     prisma.task.findMany.mockClear();
-    redisMock.get.mockResolvedValueOnce(cachedPayload);
+    redisMock.get.mockImplementationOnce(() => Promise.resolve('0'));
+    redisMock.get.mockImplementationOnce(() => Promise.resolve('0'));
+    redisMock.get.mockImplementationOnce(() => Promise.resolve(cachedPayload));
 
     const cached = await service.listTasksForWorkspace({
       workspaceId,
@@ -604,7 +604,9 @@ describe('TasksService', () => {
     }
 
     prisma.task.findMany.mockClear();
-    redisMock.get.mockResolvedValueOnce(cachedPayload);
+    redisMock.get.mockImplementationOnce(() => Promise.resolve('0'));
+    redisMock.get.mockImplementationOnce(() => Promise.resolve('0'));
+    redisMock.get.mockImplementationOnce(() => Promise.resolve(cachedPayload));
 
     const cached = await service.listTasksForWorkspace({
       workspaceId,
@@ -617,7 +619,9 @@ describe('TasksService', () => {
   });
 
   it('falls back to fresh task data when redis.get fails', async () => {
-    redisMock.get.mockRejectedValueOnce(new Error('redis unavailable'));
+    redisMock.get.mockImplementationOnce(() => {
+      throw new Error('redis unavailable');
+    });
     prisma.task.findMany.mockResolvedValueOnce(buildTaskRecordList());
 
     const result = await service.listTasksForWorkspace({
@@ -636,7 +640,9 @@ describe('TasksService', () => {
   });
 
   it('treats malformed cached JSON as a cache miss', async () => {
-    redisMock.get.mockResolvedValueOnce('{not-json');
+    redisMock.get.mockImplementationOnce(() => Promise.resolve('0'));
+    redisMock.get.mockImplementationOnce(() => Promise.resolve('0'));
+    redisMock.get.mockImplementationOnce(() => Promise.resolve('{not-json'));
     prisma.task.findMany.mockResolvedValueOnce(buildTaskRecordList());
 
     const result = await service.listTasksForWorkspace({
@@ -654,8 +660,10 @@ describe('TasksService', () => {
   });
 
   it('treats structurally invalid cached payloads as a cache miss', async () => {
-    redisMock.get.mockResolvedValueOnce(
-      JSON.stringify({
+    redisMock.get.mockImplementationOnce(() => Promise.resolve('0'));
+    redisMock.get.mockImplementationOnce(() => Promise.resolve('0'));
+    redisMock.get.mockImplementationOnce(() =>
+      Promise.resolve(JSON.stringify({
         tasks: [
           {
             id: taskId,
@@ -675,7 +683,7 @@ describe('TasksService', () => {
         limit: 50,
         hasMore: false,
         nextCursor: null,
-      }),
+      })),
     );
     prisma.task.findMany.mockResolvedValueOnce(buildTaskRecordList());
 
@@ -714,7 +722,7 @@ describe('TasksService', () => {
   it('ignores redis invalidation failures during task mutations', async () => {
     prisma.workspaceMembership.findUnique.mockResolvedValueOnce({ id: 'membership-2' });
     prisma.task.create.mockResolvedValueOnce(buildTaskRecord());
-    redisMock.keys.mockRejectedValueOnce(new Error('redis invalidation failed'));
+    redisMock.incr.mockRejectedValueOnce(new Error('redis invalidation failed'));
 
     const result = await service.createTask(
       workspaceId,

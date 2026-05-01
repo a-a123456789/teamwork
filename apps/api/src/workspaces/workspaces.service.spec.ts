@@ -216,22 +216,21 @@ describe('WorkspacesService', () => {
   });
 
   it('returns workspace board data in one service call', async () => {
-    prisma.workspaceMembership.findUnique.mockResolvedValueOnce({
+    membershipsService.requireMembership.mockResolvedValueOnce({
       id: 'membership-1',
       workspaceId: 'workspace-1',
       userId: 'user-1',
       role: 'owner',
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
-      workspace: {
-        id: 'workspace-1',
-        name: 'Product Team',
-        slug: 'product-team',
-        createdByUserId: 'user-1',
-        createdAt: new Date('2026-03-26T00:00:00.000Z'),
-        updatedAt: new Date('2026-03-26T00:00:00.000Z'),
-      },
     });
-    prisma.workspaceMembership.count.mockResolvedValueOnce(3);
+    prisma.workspace.findUnique.mockResolvedValueOnce({
+      id: 'workspace-1',
+      name: 'Product Team',
+      slug: 'product-team',
+      createdByUserId: 'user-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
+    });
     prisma.workspaceInvitation.count.mockResolvedValueOnce(2);
     membershipsService.listWorkspaceMembers.mockResolvedValueOnce([
       {
@@ -281,20 +280,20 @@ describe('WorkspacesService', () => {
   });
 
   it('skips loading workspace members for board data when includeMembers is false', async () => {
-    prisma.workspaceMembership.findUnique.mockResolvedValueOnce({
+    membershipsService.requireMembership.mockResolvedValueOnce({
       id: 'membership-1',
       workspaceId: 'workspace-1',
       userId: 'user-1',
       role: 'owner',
       createdAt: new Date('2026-03-26T00:00:00.000Z'),
-      workspace: {
-        id: 'workspace-1',
-        name: 'Product Team',
-        slug: 'product-team',
-        createdByUserId: 'user-1',
-        createdAt: new Date('2026-03-26T00:00:00.000Z'),
-        updatedAt: new Date('2026-03-26T00:00:00.000Z'),
-      },
+    });
+    prisma.workspace.findUnique.mockResolvedValueOnce({
+      id: 'workspace-1',
+      name: 'Product Team',
+      slug: 'product-team',
+      createdByUserId: 'user-1',
+      createdAt: new Date('2026-03-26T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-26T00:00:00.000Z'),
     });
     prisma.workspaceMembership.count.mockResolvedValueOnce(3);
     prisma.workspaceInvitation.count.mockResolvedValueOnce(2);
