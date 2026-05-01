@@ -26,6 +26,7 @@ const userSummarySelect = {
 
 const DEFAULT_TASK_LIST_RESULTS = 50;
 const MAX_TASK_LIST_RESULTS = 100;
+const TASK_LIST_CACHE_GLOBAL_VERSION_KEY = 'tasks:list:version:global';
 
 const taskDetailsSelect = {
   id: true,
@@ -57,6 +58,12 @@ const taskListSelect = {
   assigneeUserId: true,
   createdAt: true,
   updatedAt: true,
+  createdByUser: {
+    select: userSummarySelect,
+  },
+  assigneeUser: {
+    select: userSummarySelect,
+  },
 } satisfies Prisma.TaskSelect;
 
 type TaskRecord = Prisma.TaskGetPayload<{
@@ -153,7 +160,7 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
-    await this.invalidateTaskListCaches();
+    await this.invalidateTaskListCaches(workspaceId);
 
     return this.toDetails(task);
   }
@@ -178,7 +185,8 @@ export class TasksService {
   }
 
   private async listTasks(input: ListTasksForUserInput): Promise<TaskListResponse> {
-    const cacheKey = this.buildTaskListCacheKey(input);
+    const cacheVersion = await this.readTaskListCacheVersion(input.workspaceId);
+    const cacheKey = this.buildTaskListCacheKey(input, cacheVersion);
 
     try {
       const cached = await redis.get(cacheKey);
@@ -211,11 +219,10 @@ export class TasksService {
 
     const hasMore = taskRecords.length > limit;
     const visibleTasks = hasMore ? taskRecords.slice(0, limit) : taskRecords;
-    const usersById = await this.loadTaskListUsers(visibleTasks);
     const lastVisibleTask = visibleTasks.at(-1);
     const nextCursor = hasMore && lastVisibleTask ? lastVisibleTask.id : null;
 
-    const summaries = visibleTasks.map((task) => this.toSummaryFromListRecord(task, usersById));
+    const summaries = visibleTasks.map((task) => this.toSummaryFromListRecord(task));
     const serializedTasks =
       input.includeDescription === false
         ? summaries.map((task) => ({
@@ -287,7 +294,7 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
-    await this.invalidateTaskListCaches();
+    await this.invalidateTaskListCaches(workspaceId);
 
     return this.toDetails(task);
   }
@@ -301,7 +308,7 @@ export class TasksService {
         where: { id: taskId },
       });
 
-      await this.invalidateTaskListCaches();
+      await this.invalidateTaskListCaches(workspaceId);
 
       this.securityTelemetryService.record({
         category: 'destructive',
@@ -344,7 +351,7 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
-    await this.invalidateTaskListCaches();
+    await this.invalidateTaskListCaches(workspaceId);
 
     return this.toDetails(task);
   }
@@ -366,7 +373,7 @@ export class TasksService {
       select: taskDetailsSelect,
     });
 
-    await this.invalidateTaskListCaches();
+    await this.invalidateTaskListCaches(workspaceId);
 
     return this.toDetails(task);
   }
@@ -567,46 +574,8 @@ export class TasksService {
     return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   }
 
-  private async loadTaskListUsers(tasks: TaskListRecord[]): Promise<Map<string, TaskActorSummary>> {
-    const userIds = new Set<string>();
-
-    for (const task of tasks) {
-      userIds.add(task.createdByUserId);
-
-      if (task.assigneeUserId) {
-        userIds.add(task.assigneeUserId);
-      }
-    }
-
-    if (userIds.size === 0) {
-      return new Map();
-    }
-
-    const users = await this.prisma.user.findMany({
-      where: {
-        id: {
-          in: Array.from(userIds),
-        },
-      },
-      select: userSummarySelect,
-    });
-
-    return new Map(users.map((user) => [user.id, this.toTaskActorSummary(user)]));
-  }
-
-  private toSummaryFromListRecord(
-    task: TaskListRecord,
-    usersById: Map<string, TaskActorSummary>,
-  ): TaskSummary {
-    const createdByUser = usersById.get(task.createdByUserId);
-
-    if (!createdByUser) {
-      throw new NotFoundException('Task creator not found.');
-    }
-
-    const assigneeUser = task.assigneeUserId ? (usersById.get(task.assigneeUserId) ?? null) : null;
-
-    if (task.assigneeUserId && !assigneeUser) {
+  private toSummaryFromListRecord(task: TaskListRecord): TaskSummary {
+    if (task.assigneeUserId && !task.assigneeUser) {
       throw new NotFoundException('Task assignee not found.');
     }
 
@@ -621,8 +590,8 @@ export class TasksService {
       assigneeUserId: task.assigneeUserId,
       createdAt: task.createdAt.toISOString(),
       updatedAt: task.updatedAt.toISOString(),
-      createdByUser,
-      assigneeUser,
+      createdByUser: this.toTaskActorSummary(task.createdByUser),
+      assigneeUser: task.assigneeUser ? this.toTaskActorSummary(task.assigneeUser) : null,
     };
   }
 
@@ -634,7 +603,7 @@ export class TasksService {
     return Math.min(Math.max(requestedLimit, 1), MAX_TASK_LIST_RESULTS);
   }
 
-  private buildTaskListCacheKey(input: ListTasksForUserInput): string {
+  private buildTaskListCacheKey(input: ListTasksForUserInput, cacheVersion: string): string {
     const limit = this.resolveTaskListLimit(input.limit);
     const referenceDateSegment = this.resolveTaskListCacheReferenceDateSegment(input);
 
@@ -646,9 +615,36 @@ export class TasksService {
       input.assignment ?? 'everyone',
       input.dueBucket ?? 'all',
       referenceDateSegment,
+      cacheVersion,
       String(limit),
       input.cursor ?? 'start',
     ].join(':');
+  }
+
+  private async readTaskListCacheVersion(workspaceId: string | undefined): Promise<string> {
+    try {
+      const workspaceVersionKey = this.buildWorkspaceTaskListCacheVersionKey(workspaceId);
+      const [globalVersionRaw, workspaceVersionRaw] = await Promise.all([
+        redis.get(TASK_LIST_CACHE_GLOBAL_VERSION_KEY),
+        redis.get(workspaceVersionKey),
+      ]);
+
+      return `${this.normalizeCacheVersion(globalVersionRaw)}.${this.normalizeCacheVersion(workspaceVersionRaw)}`;
+    } catch {
+      return '0.0';
+    }
+  }
+
+  private buildWorkspaceTaskListCacheVersionKey(workspaceId: string | undefined): string {
+    return `tasks:list:version:workspace:${workspaceId ?? 'all'}`;
+  }
+
+  private normalizeCacheVersion(rawVersion: string | null): string {
+    if (!rawVersion) {
+      return '0';
+    }
+
+    return /^\d+$/.test(rawVersion) ? rawVersion : '0';
   }
 
   private resolveTaskListCacheReferenceDateSegment(input: ListTasksForUserInput): string {
@@ -659,15 +655,12 @@ export class TasksService {
     return input.referenceDate ?? serializeTaskDueDate(this.resolveReferenceDate(undefined)) ?? 'no-reference-date';
   }
 
-  private async invalidateTaskListCaches(): Promise<void> {
+  private async invalidateTaskListCaches(workspaceId: string): Promise<void> {
     try {
-      const keys = await redis.keys('tasks:list:*');
-
-      if (keys.length === 0) {
-        return;
-      }
-
-      await redis.del(...keys);
+      await Promise.all([
+        redis.incr(TASK_LIST_CACHE_GLOBAL_VERSION_KEY),
+        redis.incr(this.buildWorkspaceTaskListCacheVersionKey(workspaceId)),
+      ]);
     } catch {
       // Treat cache invalidation failures as non-fatal.
     }

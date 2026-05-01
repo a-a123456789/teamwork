@@ -3,8 +3,7 @@ import Redis, { type RedisOptions } from 'ioredis';
 interface TaskRedisClient {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, mode: 'EX', seconds: number): Promise<string | null>;
-  keys(pattern: string): Promise<string[]>;
-  del(...keys: string[]): Promise<number>;
+  incr(key: string): Promise<number>;
 }
 
 type RedisClient = InstanceType<typeof Redis>;
@@ -62,15 +61,8 @@ export const redis: TaskRedisClient = {
       activeClient.set(key, value, mode, seconds),
     );
   },
-  async keys(pattern) {
-    return runRedisCommand([], async (activeClient) => activeClient.keys(pattern));
-  },
-  async del(...keys) {
-    if (keys.length === 0) {
-      return 0;
-    }
-
-    return runRedisCommand(0, async (activeClient) => activeClient.del(...keys));
+  async incr(key) {
+    return runRedisCommand(0, async (activeClient) => activeClient.incr(key));
   },
 };
 

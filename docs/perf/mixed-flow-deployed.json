@@ -1,0 +1,148 @@
+{
+  "startedAt": "2026-04-16T05:08:56.474Z",
+  "capturedAt": "2026-04-16T05:11:17.956Z",
+  "apiBaseUrl": "https://teamwork-x0bz.onrender.com",
+  "fixture": {
+    "workspaceId": "30938dff-da66-459a-b89c-e8882823e396",
+    "sampleTaskId": "664f00c6-1078-4bc9-bcd7-22ccfd8ecf3f",
+    "benchmarkTaskCount": 50
+  },
+  "tests": [
+    {
+      "id": "test-a-realistic-active-usage",
+      "label": "Test A — realistic active usage",
+      "config": {
+        "connections": 10,
+        "durationSeconds": 60,
+        "warmupSeconds": 10,
+        "trafficMix": {
+          "tasksInbox": 0.6,
+          "workspaceTasks": 0.3,
+          "updateStatus": 0.1
+        }
+      },
+      "totals": {
+        "totalRequests": 1887,
+        "requestsPerSecond": 31.45,
+        "success": 1887,
+        "errors": 0,
+        "non2xx": 0
+      },
+      "endpoints": [
+        {
+          "id": "tasks-inbox",
+          "label": "GET /tasks",
+          "latencyMs": {
+            "p50": 297.34,
+            "p95": 591.63,
+            "p99": 713.24,
+            "avg": 304.41
+          },
+          "requestsPerSecond": 19.13,
+          "totalRequests": 1148,
+          "success": 1148,
+          "errors": 0,
+          "non2xx": 0
+        },
+        {
+          "id": "workspace-tasks",
+          "label": "GET /workspaces/:workspaceId/tasks",
+          "latencyMs": {
+            "p50": 297.28,
+            "p95": 522.7,
+            "p99": 710.39,
+            "avg": 306.64
+          },
+          "requestsPerSecond": 9.32,
+          "totalRequests": 559,
+          "success": 559,
+          "errors": 0,
+          "non2xx": 0
+        },
+        {
+          "id": "update-status",
+          "label": "PATCH /workspaces/:workspaceId/tasks/:taskId/status",
+          "latencyMs": {
+            "p50": 401.77,
+            "p95": 780.25,
+            "p99": 895.66,
+            "avg": 449.13
+          },
+          "requestsPerSecond": 3,
+          "totalRequests": 180,
+          "success": 180,
+          "errors": 0,
+          "non2xx": 0
+        }
+      ]
+    },
+    {
+      "id": "test-b-moderate-peak-usage",
+      "label": "Test B — moderate peak usage",
+      "config": {
+        "connections": 20,
+        "durationSeconds": 60,
+        "warmupSeconds": 10,
+        "trafficMix": {
+          "tasksInbox": 0.6,
+          "workspaceTasks": 0.3,
+          "updateStatus": 0.1
+        }
+      },
+      "totals": {
+        "totalRequests": 1777,
+        "requestsPerSecond": 29.62,
+        "success": 1777,
+        "errors": 0,
+        "non2xx": 0
+      },
+      "endpoints": [
+        {
+          "id": "tasks-inbox",
+          "label": "GET /tasks",
+          "latencyMs": {
+            "p50": 601.38,
+            "p95": 1015.7,
+            "p99": 1148.11,
+            "avg": 656.54
+          },
+          "requestsPerSecond": 18.1,
+          "totalRequests": 1086,
+          "success": 1086,
+          "errors": 0,
+          "non2xx": 0
+        },
+        {
+          "id": "workspace-tasks",
+          "label": "GET /workspaces/:workspaceId/tasks",
+          "latencyMs": {
+            "p50": 602.98,
+            "p95": 1006.72,
+            "p99": 1126.21,
+            "avg": 662.61
+          },
+          "requestsPerSecond": 8.8,
+          "totalRequests": 528,
+          "success": 528,
+          "errors": 0,
+          "non2xx": 0
+        },
+        {
+          "id": "update-status",
+          "label": "PATCH /workspaces/:workspaceId/tasks/:taskId/status",
+          "latencyMs": {
+            "p50": 804.92,
+            "p95": 1291.67,
+            "p99": 1436.08,
+            "avg": 860.71
+          },
+          "requestsPerSecond": 2.72,
+          "totalRequests": 163,
+          "success": 163,
+          "errors": 0,
+          "non2xx": 0
+        }
+      ]
+    }
+  ]
+}

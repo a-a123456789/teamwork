@@ -253,11 +253,34 @@ export class WorkspacesService {
     cursor?: string;
   }): Promise<WorkspaceBoardDataResponse> {
     const includeMembers = input.includeMembers ?? true;
-    const [workspace, members, taskList] = await Promise.all([
-      this.getWorkspaceForUser(input.workspaceId, input.currentUserId),
+    const membership = await this.membershipsService.requireMembership(
+      input.workspaceId,
+      input.currentUserId,
+    );
+    const workspace = await toWorkspaceDatabase(this.prisma).workspace.findUnique({
+      where: { id: input.workspaceId },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found.');
+    }
+
+    const [members, invitationCount, memberCount, taskList] = await Promise.all([
       includeMembers
         ? this.membershipsService.listWorkspaceMembers(input.workspaceId)
         : Promise.resolve([]),
+      this.prisma.workspaceInvitation.count({
+        where: {
+          workspaceId: input.workspaceId,
+          acceptedAt: null,
+          revokedAt: null,
+        },
+      }),
+      includeMembers
+        ? Promise.resolve<number>(0)
+        : this.prisma.workspaceMembership.count({
+            where: { workspaceId: input.workspaceId },
+          }),
       this.tasksService.listTasksForWorkspace({
         workspaceId: input.workspaceId,
         currentUserId: input.currentUserId,
@@ -271,7 +294,11 @@ export class WorkspacesService {
     ]);
 
     return {
-      workspace,
+      workspace: {
+        ...this.toAuthenticatedWorkspace(workspace, membership),
+        memberCount: includeMembers ? members.length : memberCount,
+        invitationCount,
+      },
       members,
       membersLoaded: includeMembers,
       ...taskList,
